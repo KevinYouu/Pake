@@ -1,3 +1,5 @@
+> #### This repository only modifies the closing logic of the window of the original project.
+
 <h4 align="right"><strong>English</strong> | <a href="https://github.com/tw93/Pake/blob/master/README_CN.md">简体中文</a></h4>
 <p align="center">
     <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/>

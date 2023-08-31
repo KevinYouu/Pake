@@ -19,8 +19,8 @@ import { fileTypeFromBuffer } from 'file-type';
 import psl from 'psl';
 import isUrl from 'is-url';
 
-var name = "pake-cli";
-var version = "2.3.2";
+var name = "pake-cli-kevin";
+var version = "2.3.3";
 var description = "🤱🏻 Turn any webpage into a desktop app with Rust. 🤱🏻 利用 Rust 轻松构建轻量级多端桌面应用。";
 var engines = {
 	node: ">=16.0.0"
@@ -55,8 +55,7 @@ var scripts = {
 	build: "npm run tauri build --release",
 	"build:debug": "npm run tauri build -- --debug",
 	"build:mac": "npm run tauri build -- --target universal-apple-darwin",
-	"build:all-unix": "chmod +x ./script/build.sh && ./script/build.sh",
-	"build:all-windows": "pwsh ./script/build.ps1",
+	"build:config": "chmod +x script/app_config.mjs && node script/app_config.mjs",
 	analyze: "cd src-tauri && cargo bloat --release --crates",
 	tauri: "tauri",
 	cli: "rollup -c rollup.config.js --watch",
@@ -92,6 +91,7 @@ var devDependencies = {
 	"@rollup/plugin-terser": "^0.1.0",
 	"@types/fs-extra": "^9.0.13",
 	"@types/is-url": "^1.2.30",
+	"@types/node": "^20.5.7",
 	"@types/page-icon": "^0.3.4",
 	"@types/prompts": "^2.4.1",
 	"@types/psl": "^1.1.0",
