@@ -20,7 +20,7 @@ import psl from 'psl';
 import isUrl from 'is-url';
 
 var name = "pake-cli-kevin";
-var version = "2.3.3";
+var version = "2.3.4";
 var description = "🤱🏻 Turn any webpage into a desktop app with Rust. 🤱🏻 利用 Rust 轻松构建轻量级多端桌面应用。";
 var engines = {
 	node: ">=16.0.0"
@@ -506,7 +506,9 @@ async function mergeConfig(url, options, tauriConf) {
         else {
             fsExtra.moveSync(distDir, distBakDir, { overwrite: true });
             fsExtra.copySync(dirName, distDir, { overwrite: true });
-            const filesToCopyBack = ['cli.js', 'about_pake.html'];
+            // ignore it, because about_pake.html have be erased.
+            // const filesToCopyBack = ['cli.js', 'about_pake.html'];
+            const filesToCopyBack = ['cli.js'];
             await Promise.all(filesToCopyBack.map(file => fsExtra.copy(path.join(distBakDir, file), path.join(distDir, file))));
         }
         tauriConf.pake.windows[0].url = fileName;

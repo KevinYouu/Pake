@@ -1,6 +1,6 @@
 > #### This repository only modifies the closing logic of the window of the original project.
 
-<h4 align="right"><strong>English</strong> | <a href="https://github.com/tw93/Pake/blob/master/README_CN.md">简体中文</a></h4>
+<h4 align="right"><strong>English</strong> | <a href="https://github.com/KevinYouu/Pake/blob/master/README_CN.md">简体中文</a></h4>
 <p align="center">
     <img src=https://gw.alipayobjects.com/zos/k/fa/logo-modified.png width=138/>
 </p>
@@ -137,7 +137,7 @@
 <br/>
 
 | Mac                         | Windows/Linux                  | Function                      |
-|-----------------------------|--------------------------------|-------------------------------|
+| --------------------------- | ------------------------------ | ----------------------------- |
 | <kbd>⌘</kbd> + <kbd>[</kbd> | <kbd>Ctrl</kbd> + <kbd>←</kbd> | Return to the previous page   |
 | <kbd>⌘</kbd> + <kbd>]</kbd> | <kbd>Ctrl</kbd> + <kbd>→</kbd> | Go to the next page           |
 | <kbd>⌘</kbd> + <kbd>↑</kbd> | <kbd>Ctrl</kbd> + <kbd>↑</kbd> | Auto scroll to top of page    |
@@ -155,7 +155,7 @@ In addition, double-click the title bar to switch to full-screen mode. For Mac u
 
 ## Before starting
 
-1. **For beginners**: Play with Popular Packages to find out Pake's capabilities, or try to pack your application with [GitHub Actions](https://github.com/tw93/Pake/wiki/Online-Compilation-(used-by-ordinary-users)). Don't hesitate to reach for assistance at [Discussion](https://github.com/tw93/Pake/discussions)!
+1. **For beginners**: Play with Popular Packages to find out Pake's capabilities, or try to pack your application with [GitHub Actions](<https://github.com/tw93/Pake/wiki/Online-Compilation-(used-by-ordinary-users)>). Don't hesitate to reach for assistance at [Discussion](https://github.com/tw93/Pake/discussions)!
 2. **For developers**: “Command-Line Packaging” supports macOS fully. For Windows/Linux users, it requires some tinkering. [Configure your environment](https://tauri.app/v1/guides/getting-started/prerequisites) before getting started.
 3. **For hackers**: For people who are good at both front-end development and Rust, how about customizing your apps' function more with the following [Customized Development](#development)?
 
@@ -176,7 +176,7 @@ pake url [OPTIONS]...
 pake https://weekly.tw93.fun --name Weekly --transparent
 ```
 
-If you are new to the command line, you can compile packages online with _GitHub Actions_. See the [Tutorial](https://github.com/tw93/Pake/wiki/Online-Compilation-(used-by-ordinary-users)) for more information.
+If you are new to the command line, you can compile packages online with _GitHub Actions_. See the [Tutorial](<https://github.com/tw93/Pake/wiki/Online-Compilation-(used-by-ordinary-users)>) for more information.
 
 ## Development
 
