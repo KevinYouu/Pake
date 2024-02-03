@@ -28,7 +28,7 @@
 - 🎐 Nearly 20 times smaller than an Electron package (around 5M!)
 - 🚀 With Rust Tauri, Pake is much more lightweight and faster than JS-based frameworks.
 - 📦 Battery-included package — shortcut pass-through, immersive windows, and minimalist customization.
-- 👻 Pake is just a simple tool — replace the old bundle approach with Rust (though PWA is good enough).
+- 👻 Pake is just a simple tool — replace the old bundle approach with Tauri (though PWA is good enough).
 
 ## Popular Packages
 
@@ -78,7 +78,7 @@
       </td>
     </tr>
     <tr>
-        <td><img src=https://cdn.fliggy.com/upic/3UREAw.png width=600/></td>
+        <td><img src=https://raw.githubusercontent.com/tw93/static/master/pic/12.png width=600/></td>
         <td><img src=https://gw.alipayobjects.com/zos/k/pn/1.jpg width=600/></td>
     </tr>
     <tr>
@@ -371,6 +371,13 @@ Pake's development can not be without these Hackers. They contributed a lot of c
             <img src="https://avatars.githubusercontent.com/u/16255922?v=4" width="90;" alt="lakca"/>
             <br />
             <sub><b>Null</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/liudonghua123">
+            <img src="https://avatars.githubusercontent.com/u/2276718?v=4" width="90;" alt="liudonghua123"/>
+            <br />
+            <sub><b>Liudonghua</b></sub>
         </a>
     </td>
     <td align="center">
