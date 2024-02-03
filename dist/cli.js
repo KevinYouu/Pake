@@ -84,22 +84,6 @@ var dependencies = {
 	"update-notifier": "^7.0.0"
 };
 var devDependencies = {
-<<<<<<< HEAD
-	"@rollup/plugin-alias": "^4.0.2",
-	"@rollup/plugin-commonjs": "^23.0.2",
-	"@rollup/plugin-json": "^5.0.2",
-	"@rollup/plugin-replace": "^5.0.2",
-	"@rollup/plugin-terser": "^0.1.0",
-	"@types/fs-extra": "^9.0.13",
-	"@types/is-url": "^1.2.30",
-	"@types/node": "^20.5.7",
-	"@types/page-icon": "^0.3.4",
-	"@types/prompts": "^2.4.1",
-	"@types/psl": "^1.1.0",
-	"@types/shelljs": "^0.8.11",
-	"@types/tmp": "^0.2.3",
-	"@types/update-notifier": "^6.0.1",
-=======
 	"@rollup/plugin-alias": "^5.0.1",
 	"@rollup/plugin-commonjs": "^25.0.7",
 	"@rollup/plugin-json": "^6.0.1",
@@ -113,7 +97,6 @@ var devDependencies = {
 	"@types/shelljs": "^0.8.15",
 	"@types/tmp": "^0.2.6",
 	"@types/update-notifier": "^6.0.7",
->>>>>>> 58eee3c53c04da96b28cdaaddf49a7d72a7cea23
 	"app-root-path": "^3.1.0",
 	"cross-env": "^7.0.3",
 	rollup: "^4.3.0",
