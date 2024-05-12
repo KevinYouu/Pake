@@ -49,7 +49,7 @@ export default abstract class BaseBuilder {
     const isChina = await isChinaDomain('www.npmjs.com');
     const spinner = getSpinner('Installing package...');
     const rustProjectDir = path.join(tauriSrcPath, '.cargo');
-    const projectConf = path.join(rustProjectDir, 'config');
+    const projectConf = path.join(rustProjectDir, 'config.toml');
     await fsExtra.ensureDir(rustProjectDir);
 
     if (isChina) {
@@ -66,14 +66,13 @@ export default abstract class BaseBuilder {
     }
   }
 
-
   async build(url: string) {
     await this.buildAndCopy(url, this.options.targets);
   }
 
   async start(url: string) {
     await mergeConfig(url, this.options, tauriConfig);
-  } 
+  }
 
   async buildAndCopy(url: string, target: string) {
     const { name } = this.options;
@@ -107,7 +106,8 @@ export default abstract class BaseBuilder {
   }
 
   protected getBasePath(): string {
-    return 'src-tauri/target/release/bundle/';
+    const basePath = this.options.debug ? 'debug' : 'release';
+    return `src-tauri/target/${basePath}/bundle/`;
   }
 
   protected getBuildAppPath(npmDirectory: string, fileName: string, fileType: string): string {

@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { InvalidArgumentError, program } from 'commander';
+import { InvalidArgumentError, program, Option } from 'commander';
 import log from 'loglevel';
 import path from 'path';
 import fsExtra from 'fs-extra';
@@ -19,8 +19,8 @@ import { fileTypeFromBuffer } from 'file-type';
 import psl from 'psl';
 import isUrl from 'is-url';
 
-var name = "pake-cli-kevin";
-var version = "2.3.5";
+var name = "pake-cli";
+var version = "2.5.1";
 var description = "🤱🏻 Turn any webpage into a desktop app with Rust. 🤱🏻 利用 Rust 轻松构建轻量级多端桌面应用。";
 var engines = {
 	node: ">=16.0.0"
@@ -67,15 +67,15 @@ var type = "module";
 var exports = "./dist/pake.js";
 var license = "MIT";
 var dependencies = {
-	"@tauri-apps/api": "^1.5.1",
-	"@tauri-apps/cli": "^1.5.6",
-	axios: "^1.6.1",
+	"@tauri-apps/api": "^1.5.4",
+	"@tauri-apps/cli": "^1.5.13",
+	axios: "^1.6.8",
 	chalk: "^5.3.0",
 	commander: "^11.1.0",
-	"file-type": "^18.6.0",
-	"fs-extra": "^11.1.1",
+	"file-type": "^18.7.0",
+	"fs-extra": "^11.2.0",
 	"is-url": "^1.2.4",
-	loglevel: "^1.8.1",
+	loglevel: "^1.9.1",
 	ora: "^7.0.1",
 	prompts: "^2.4.2",
 	psl: "^1.9.0",
@@ -84,25 +84,26 @@ var dependencies = {
 	"update-notifier": "^7.0.0"
 };
 var devDependencies = {
-	"@rollup/plugin-alias": "^5.0.1",
+	"@rollup/plugin-alias": "^5.1.0",
 	"@rollup/plugin-commonjs": "^25.0.7",
-	"@rollup/plugin-json": "^6.0.1",
+	"@rollup/plugin-json": "^6.1.0",
 	"@rollup/plugin-replace": "^5.0.5",
 	"@rollup/plugin-terser": "^0.4.4",
 	"@types/fs-extra": "^11.0.4",
 	"@types/is-url": "^1.2.32",
+	"@types/node": "^20.12.10",
 	"@types/page-icon": "^0.3.6",
-	"@types/prompts": "^2.4.8",
+	"@types/prompts": "^2.4.9",
 	"@types/psl": "^1.1.3",
 	"@types/shelljs": "^0.8.15",
 	"@types/tmp": "^0.2.6",
-	"@types/update-notifier": "^6.0.7",
+	"@types/update-notifier": "^6.0.8",
 	"app-root-path": "^3.1.0",
 	"cross-env": "^7.0.3",
-	rollup: "^4.3.0",
+	rollup: "^4.17.2",
 	"rollup-plugin-typescript2": "^0.36.0",
 	tslib: "^2.6.2",
-	typescript: "^5.2.2"
+	typescript: "^5.4.5"
 };
 var packageJson = {
 	name: name,
@@ -125,23 +126,21 @@ var packageJson = {
 var windows = [
 	{
 		url: "https://weread.qq.com",
-		transparent: true,
+		url_type: "web",
+		hide_title_bar: true,
 		fullscreen: false,
 		width: 1200,
 		height: 780,
 		resizable: true,
-		url_type: "web"
+		always_on_top: false,
+		activation_shortcut: "",
+		disabled_web_shortcuts: false
 	}
 ];
 var user_agent = {
 	macos: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
 	linux: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
 	windows: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
-};
-var menu = {
-	macos: false,
-	linux: false,
-	windows: false
 };
 var system_tray = {
 	macos: false,
@@ -153,7 +152,6 @@ var inject = [
 var pakeConf = {
 	windows: windows,
 	user_agent: user_agent,
-	menu: menu,
 	system_tray: system_tray,
 	inject: inject
 };
@@ -176,7 +174,7 @@ var tauri$3 = {
 	},
 	systemTray: {
 		iconPath: "png/icon_512.png",
-		iconAsTemplate: true
+		iconAsTemplate: false
 	},
 	allowlist: {
 		all: true,
@@ -433,7 +431,7 @@ async function isChinaIP(ip, domain) {
     try {
         const delay = await ping(ip);
         logger.debug(`${domain} latency is ${delay} ms`);
-        return delay > 1000;
+        return delay > 500;
     }
     catch (error) {
         logger.debug(`ping ${domain} failed!`);
@@ -467,24 +465,29 @@ async function combineFiles(files, output) {
     const contents = files.map(file => {
         const fileContent = fs.readFileSync(file);
         if (file.endsWith('.css')) {
-            return "window.addEventListener('DOMContentLoaded', (_event) => { const css = `" + fileContent + "`; const style = document.createElement('style'); style.innerHTML = css; document.head.appendChild(style); });";
+            return ("window.addEventListener('DOMContentLoaded', (_event) => { const css = `" +
+                fileContent +
+                "`; const style = document.createElement('style'); style.innerHTML = css; document.head.appendChild(style); });");
         }
-        return "window.addEventListener('DOMContentLoaded', (_event) => { " + fileContent + " });";
+        return "window.addEventListener('DOMContentLoaded', (_event) => { " + fileContent + ' });';
     });
     fs.writeFileSync(output, contents.join('\n'));
     return files;
 }
 
 async function mergeConfig(url, options, tauriConf) {
-    const { width, height, fullscreen, transparent, userAgent, showMenu, showSystemTray, systemTrayIcon, iterCopyFile, identifier, name, resizable = true, inject, safeDomain, } = options;
+    const { width, height, fullscreen, hideTitleBar, alwaysOnTop, disabledWebShortcuts, activationShortcut, userAgent, showSystemTray, systemTrayIcon, useLocalFile, identifier, name, resizable = true, inject, safeDomain, } = options;
     const { platform } = process;
     // Set Windows parameters.
     const tauriConfWindowOptions = {
         width,
         height,
         fullscreen,
-        transparent,
         resizable,
+        hide_title_bar: hideTitleBar,
+        activation_shortcut: activationShortcut,
+        always_on_top: alwaysOnTop,
+        disabled_web_shortcuts: disabledWebShortcuts,
     };
     Object.assign(tauriConf.pake.windows[0], { url, ...tauriConfWindowOptions });
     tauriConf.package.productName = name;
@@ -498,7 +501,7 @@ async function mergeConfig(url, options, tauriConf) {
         const dirName = path.dirname(url);
         const distDir = path.join(npmDirectory, 'dist');
         const distBakDir = path.join(npmDirectory, 'dist_bak');
-        if (!iterCopyFile) {
+        if (!useLocalFile) {
             const urlPath = path.join(distDir, fileName);
             await fsExtra.copy(url, urlPath);
         }
@@ -543,7 +546,6 @@ async function mergeConfig(url, options, tauriConf) {
     if (userAgent.length > 0) {
         tauriConf.pake.user_agent[currentPlatform] = userAgent;
     }
-    tauriConf.pake.menu[currentPlatform] = showMenu;
     tauriConf.pake.system_tray[currentPlatform] = showSystemTray;
     // Processing targets are currently only open to Linux.
     if (platform === 'linux') {
@@ -633,7 +635,7 @@ async function mergeConfig(url, options, tauriConf) {
             logger.error('The injected file must be in either CSS or JS format.');
             return;
         }
-        const files = inject.map(filepath => path.isAbsolute(filepath) ? filepath : path.join(process.cwd(), filepath));
+        const files = inject.map(filepath => (path.isAbsolute(filepath) ? filepath : path.join(process.cwd(), filepath)));
         tauriConf.pake.inject = files;
         await combineFiles(files, injectFilePath);
     }
@@ -688,7 +690,7 @@ class BaseBuilder {
         const isChina = await isChinaDomain('www.npmjs.com');
         const spinner = getSpinner('Installing package...');
         const rustProjectDir = path.join(tauriSrcPath, '.cargo');
-        const projectConf = path.join(rustProjectDir, 'config');
+        const projectConf = path.join(rustProjectDir, 'config.toml');
         await fsExtra.ensureDir(rustProjectDir);
         if (isChina) {
             logger.info('✺ Located in China, using npm/rsProxy CN mirror.');
@@ -735,7 +737,8 @@ class BaseBuilder {
         return this.options.debug ? 'npm run build:debug' : 'npm run build';
     }
     getBasePath() {
-        return 'src-tauri/target/release/bundle/';
+        const basePath = this.options.debug ? 'debug' : 'release';
+        return `src-tauri/target/${basePath}/bundle/`;
     }
     getBuildAppPath(npmDirectory, fileName, fileType) {
         return path.join(npmDirectory, this.getBasePath(), fileType.toLowerCase(), `${fileName}.${fileType}`);
@@ -829,13 +832,15 @@ const DEFAULT_PAKE_OPTIONS = {
     width: 1200,
     fullscreen: false,
     resizable: true,
-    transparent: false,
+    hideTitleBar: false,
+    alwaysOnTop: false,
+    disabledWebShortcuts: false,
+    activationShortcut: '',
     userAgent: '',
-    showMenu: false,
     showSystemTray: false,
     multiArch: false,
     targets: 'deb',
-    iterCopyFile: false,
+    useLocalFile: false,
     systemTrayIcon: '',
     debug: false,
     inject: [],
@@ -964,7 +969,7 @@ async function handleOptions(options, url) {
     }
     if (!isValidName(name, platform)) {
         const LINUX_NAME_ERROR = `✕ name should only include lowercase letters, numbers, and dashes, and must contain at least one lowercase letter. Examples: com-123-xxx, 123pan, pan123, weread, we-read.`;
-        const DEFAULT_NAME_ERROR = `✕ Name should only include letters and numbers, and dashes (dashes must not at the begining), and must contain at least one letter. Examples: 123pan, 123Pan, Pan123, weread, WeRead, WERead, we-read.`;
+        const DEFAULT_NAME_ERROR = `✕ Name should only include letters and numbers, and dashes (dashes must not at the beginning), and must contain at least one letter. Examples: 123pan, 123Pan, Pan123, weread, WeRead, WERead, we-read.`;
         const errorMsg = platform === 'linux' ? LINUX_NAME_ERROR : DEFAULT_NAME_ERROR;
         logger.error(errorMsg);
         if (isActions) {
@@ -1011,28 +1016,31 @@ ${green('| |_) / _` | |/ / _ \\')}
 ${green('|  __/ (_| |   <  __/')}  ${yellow('https://github.com/tw93/pake')}
 ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with Rust.')}
 `;
-program
-    .addHelpText('beforeAll', logo)
-    .usage(`[url] [options]`)
-    .showHelpAfterError();
+program.addHelpText('beforeAll', logo).usage(`[url] [options]`).showHelpAfterError();
 program
     .argument('[url]', 'The web URL you want to package', validateUrlInput)
     .option('--name <string>', 'Application name')
     .option('--icon <string>', 'Application icon', DEFAULT_PAKE_OPTIONS.icon)
     .option('--width <number>', 'Window width', validateNumberInput, DEFAULT_PAKE_OPTIONS.width)
     .option('--height <number>', 'Window height', validateNumberInput, DEFAULT_PAKE_OPTIONS.height)
-    .option('--transparent', 'Only for Mac, hide title bar', DEFAULT_PAKE_OPTIONS.transparent)
+    .option('--use-local-file', 'Use local file packaging', DEFAULT_PAKE_OPTIONS.useLocalFile)
     .option('--fullscreen', 'Start in full screen', DEFAULT_PAKE_OPTIONS.fullscreen)
-    .option('--user-agent <string>', 'Custom user agent', DEFAULT_PAKE_OPTIONS.userAgent)
-    .option('--show-menu', 'Show menu in app', DEFAULT_PAKE_OPTIONS.showMenu)
-    .option('--show-system-tray', 'Show system tray in app', DEFAULT_PAKE_OPTIONS.showSystemTray)
-    .option('--system-tray-icon <string>', 'Custom system tray icon', DEFAULT_PAKE_OPTIONS.systemTrayIcon)
-    .option('--iter-copy-file', 'Copy files when URL is a local file', DEFAULT_PAKE_OPTIONS.iterCopyFile)
+    .option('--hide-title-bar', 'Only for Mac, hide title bar', DEFAULT_PAKE_OPTIONS.hideTitleBar)
+    .option('--activation-shortcut <string>', 'Shortcut key to active App', DEFAULT_PAKE_OPTIONS.activationShortcut)
     .option('--multi-arch', 'Only for Mac, supports both Intel and M1', DEFAULT_PAKE_OPTIONS.multiArch)
-    .option('--targets <string>', 'Only for Linux, option "deb" or "appimage"', DEFAULT_PAKE_OPTIONS.targets)
     .option('--inject [injects...]', 'Injection of .js or .css Files', DEFAULT_PAKE_OPTIONS.inject)
-    .option('--safe-domain [domains...]', 'Domains that Require Security Configuration"', DEFAULT_PAKE_OPTIONS.safeDomain)
-    .option('--debug', 'Debug mode', DEFAULT_PAKE_OPTIONS.debug)
+    .option('--debug', 'Debug build and more output', DEFAULT_PAKE_OPTIONS.debug)
+    .addOption(new Option('--user-agent <string>', 'Custom user agent').default(DEFAULT_PAKE_OPTIONS.userAgent).hideHelp())
+    .addOption(new Option('--targets <string>', 'Only for Linux, option "deb" or "appimage"').default(DEFAULT_PAKE_OPTIONS.targets).hideHelp())
+    .addOption(new Option('--always-on-top', 'Always on the top level').default(DEFAULT_PAKE_OPTIONS.alwaysOnTop).hideHelp())
+    .addOption(new Option('--disabled-web-shortcuts', 'Disabled webPage shortcuts')
+    .default(DEFAULT_PAKE_OPTIONS.disabledWebShortcuts)
+    .hideHelp())
+    .addOption(new Option('--safe-domain [domains...]', 'Domains that Require Security Configuration')
+    .default(DEFAULT_PAKE_OPTIONS.safeDomain)
+    .hideHelp())
+    .addOption(new Option('--show-system-tray', 'Show system tray in app').default(DEFAULT_PAKE_OPTIONS.showSystemTray).hideHelp())
+    .addOption(new Option('--system-tray-icon <string>', 'Custom system tray icon').default(DEFAULT_PAKE_OPTIONS.systemTrayIcon).hideHelp())
     .version(packageJson.version, '-v, --version', 'Output the current version')
     .action(async (url, options) => {
     await checkUpdateTips();
