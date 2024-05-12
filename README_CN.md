@@ -137,7 +137,7 @@
 <br/>
 
 | Mac                         | Windows/Linux                  | 功能        |
-|-----------------------------|--------------------------------|-----------|
+| --------------------------- | ------------------------------ | --------- |
 | <kbd>⌘</kbd> + <kbd>[</kbd> | <kbd>Ctrl</kbd> + <kbd>←</kbd> | 返回上一个页面   |
 | <kbd>⌘</kbd> + <kbd>]</kbd> | <kbd>Ctrl</kbd> + <kbd>→</kbd> | 去下一个页面    |
 | <kbd>⌘</kbd> + <kbd>↑</kbd> | <kbd>Ctrl</kbd> + <kbd>↑</kbd> | 自动滚动到页面顶部 |
@@ -170,7 +170,7 @@
 
 ```bash
 # 使用 npm 进行安装
-npm install -g pake-cli
+npm install -g pake-cli-kevin
 
 # 命令使用
 pake url [OPTIONS]...
@@ -194,7 +194,6 @@ npm run dev
 
 # 打包应用
 npm run build
-
 ```
 
 ## 高级使用
@@ -209,6 +208,7 @@ npm run build
 Pake 的发展离不开这些 Hacker 们，一起贡献了大量能力，也欢迎关注他们 ❤️
 
 <!-- readme: contributors -start -->
+
 <table>
 <tr>
     <td align="center">

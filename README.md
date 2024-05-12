@@ -167,7 +167,7 @@ In addition, double-click the title bar to switch to full-screen mode. For Mac u
 
 ```bash
 # Install with npm
-npm install -g pake-cli
+npm install -g pake-cli-kevin
 
 # Command usage
 pake url [OPTIONS]...
@@ -207,6 +207,7 @@ npm run build
 Pake's development can not be without these Hackers. They contributed a lot of capabilities for Pake. Also, welcome to follow them! ❤️
 
 <!-- readme: contributors -start -->
+
 <table>
 <tr>
     <td align="center">
