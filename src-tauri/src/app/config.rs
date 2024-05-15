@@ -34,15 +34,6 @@ impl<T> PlatformSpecific<T> {
     }
 }
 
-impl<T> PlatformSpecific<T>
-where
-    T: Copy,
-{
-    pub const fn copied(&self) -> T {
-        *self.get()
-    }
-}
-
 pub type UserAgent = PlatformSpecific<String>;
 pub type FunctionON = PlatformSpecific<bool>;
 
@@ -51,10 +42,4 @@ pub struct PakeConfig {
     pub windows: Vec<WindowConfig>,
     pub user_agent: UserAgent,
     pub system_tray: FunctionON,
-}
-
-impl PakeConfig {
-    pub fn show_system_tray(&self) -> bool {
-        self.system_tray.copied()
-    }
 }

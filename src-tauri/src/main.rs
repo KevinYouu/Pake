@@ -17,7 +17,7 @@ pub fn run_app() {
     let (pake_config, tauri_config) = get_pake_config();
     let data_dir = get_data_dir(tauri_config);
 
-    let mut tauri_app = tauri::Builder::default();
+    let tauri_app = tauri::Builder::default();
 
     // Save the value of toggle_app_shortcut before pake_config is moved
     let activation_shortcut = pake_config.windows[0].activation_shortcut.clone();
