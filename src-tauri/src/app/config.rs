@@ -10,6 +10,7 @@ pub struct WindowConfig {
     pub resizable: bool,
     pub url_type: String,
     pub always_on_top: bool,
+    pub dark_mode: bool,
     pub disabled_web_shortcuts: bool,
     pub activation_shortcut: String,
 }
@@ -42,4 +43,6 @@ pub struct PakeConfig {
     pub windows: Vec<WindowConfig>,
     pub user_agent: UserAgent,
     pub system_tray: FunctionON,
+    pub system_tray_path: String,
+    pub proxy_url: String,
 }

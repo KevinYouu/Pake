@@ -1,4 +1,4 @@
-<h4 align="right"><strong>English</strong> | <a href="https://github.com/tw93/Pake/blob/master/bin/README_CN.md">简体中文</a></h4>
+<h4 align="right"><strong>English</strong> | <a href="https://github.com/tw93/Pake/blob/main/bin/README_CN.md">简体中文</a></h4>
 
 ## Installation
 
@@ -8,9 +8,10 @@ Ensure that your Node.js version is 18.0 or higher (e.g., 18.20.2). Avoid using 
 npm install pake-cli -g
 ```
 
-## Considerations for Windows & Linux Users
+<details>
+<summary><strong>Considerations for Windows & Linux Users</strong></summary>
 
-- **CRITICAL**: Consult [Tauri prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites) before proceeding.
+- **CRITICAL**: Consult [Tauri prerequisites](https://tauri.app/start/prerequisites/) before proceeding.
 - For Windows users (ensure that `Win10 SDK (10.0.19041.0)` and `Visual Studio build tool 2022 (>=17.2)` are installed), additional installations are required:
 
   1. Microsoft Visual C++ 2015-2022 Redistributable (x64)
@@ -24,8 +25,8 @@ npm install pake-cli -g
   ```bash
   sudo apt install libdbus-1-dev \
       libsoup2.4-dev \
-      libjavascriptcoregtk-4.0-dev \
-      libwebkit2gtk-4.0-dev \
+      libjavascriptcoregtk-4.1-dev \
+      libwebkit2gtk-4.1-dev \
       build-essential \
       curl \
       wget \
@@ -37,29 +38,9 @@ npm install pake-cli -g
       gnome-video-effects-extra
   ```
 
-## Usage
+</details>
 
-### Development
-
-The `DEFAULT_DEV_PAKE_OPTIONS` configuration in `bin/defaults.ts` can be modified at development time to match the `pake-cli` configuration description.
-
-```typescript
-export const DEFAULT_DEV_PAKE_OPTIONS: PakeCliOptions & { url: string } = {
-  ...DEFAULT_PAKE_OPTIONS,
-  url: 'https://weread.qq.com',
-  name: 'Weread',
-};
-```
-
-then
-
-```bash
-yarn cli:dev
-```
-
-The script will read the above configuration and packages the specified `app` using `watch` mode, and changes to the `pake-cli` code and `pake` are hot updated in real time.
-
-### CLI Usage
+## CLI Usage
 
 ```bash
 pake [url] [options]
@@ -146,6 +127,14 @@ Sets whether the window is always at the top level, defaults to `false`.
 --always-on-top
 ```
 
+#### [dark-mode]
+
+Force Mac to package applications using dark mode, default is `false`.
+
+```shell
+--dark-mode
+```
+
 #### [disabled-web-shortcuts]
 
 Sets whether to disable web shortcuts in the original Pake container, defaults to `false`.
@@ -211,6 +200,14 @@ Specify the system tray icon. This is only effective when the system tray is ena
 --system-tray-icon <path>
 ```
 
+#### [installer-language]
+
+Set the Windows Installer language. Options include `zh-CN`, `ja-JP`, More at [Tauri Document](https://tauri.app/distribute/windows-installer/#internationalization). Default is `en-US`.
+
+```shell
+--installer-language <language>
+```
+
 #### [use-local-file]
 
 Enable recursive copying. When the URL is a local file path, enabling this option will copy the folder containing the file specified in the URL, as well as all sub-files, to the Pake static folder. This is disabled by default.
@@ -227,14 +224,12 @@ Using `inject`, you can inject local absolute and relative path `css` and `js` f
 --inject ./tools/style.css,./tools/hotkey.js
 ```
 
-#### [safe-domain]
+#### [proxy-url]
 
-This secure domain is a domain other than your currently configured `url` to which you may be redirected or jumped to, and only in domains that have been configured as secure can you use `tauri` to expose `api` to browsers to ensure that pake's built-in enhancements work correctly. Only in a domain that has been configured as secure can you use the `tauri` to expose the `api` to the browser, ensuring that `pake's` built-in enhancements work correctly.
-
-PS: Secure domains do not need to carry protocols.
+If you need to proxy requests for some reason, you can set the proxy address using the `proxy-url` option.
 
 ```shell
---safe-domain weread.qq.com,google.com
+--proxy-url <url>
 ```
 
 #### [debug]
@@ -245,6 +240,43 @@ The typed package has dev-tools for debugging, in addition to outputting more lo
 --debug
 ```
 
-## Conclusion
+### Wait a moment
 
 After completing the above steps, your application should be successfully packaged. Please note that the packaging process may take some time depending on your system configuration and network conditions. Be patient, and once the packaging is complete, you can find the application installer in the specified directory.
+
+## Development
+
+The `DEFAULT_DEV_PAKE_OPTIONS` configuration in `bin/defaults.ts` can be modified at development time to match the `pake-cli` configuration description.
+
+```typescript
+export const DEFAULT_DEV_PAKE_OPTIONS: PakeCliOptions & { url: string } = {
+  ...DEFAULT_PAKE_OPTIONS,
+  url: 'https://weread.qq.com',
+  name: 'Weread',
+};
+```
+
+then
+
+```bash
+npm run cli:dev
+```
+
+The script will read the above configuration and packages the specified `app` using `watch` mode, and changes to the `pake-cli` code and `pake` are hot updated in real time.
+
+## Docker
+
+```shell
+# On Linux, you can run the Pake CLI via Docker
+docker run -it --rm \ # Run interactively, remove container after exit
+    -v YOUR_DIR:/output \ # Files from container's /output will be in YOU_DIR
+    ghcr.io/tw93/pake \
+    <arguments>
+
+# For example:
+docker run -it --rm \
+    -v ./packages:/output \
+    ghcr.io/tw93/pake \
+    https://example.com --name myapp --icon ./icon.png
+
+```

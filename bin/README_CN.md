@@ -1,4 +1,4 @@
-<h4 align="right"><strong><a href="https://github.com/tw93/Pake/tree/master/bin">English</a></strong> | 简体中文</h4>
+<h4 align="right"><strong><a href="https://github.com/tw93/Pake/tree/main/bin">English</a></strong> | 简体中文</h4>
 
 ## 安装
 
@@ -8,9 +8,10 @@
 npm install pake-cli -g
 ```
 
-## Windows/Linux 注意事项
+<details>
+<summary><strong>Windows/Linux 注意事项</strong></summary>
 
-- **非常重要**：请参阅 Tauri 的 [依赖项指南](https://tauri.app/v1/guides/getting-started/prerequisites)。
+- **非常重要**：请参阅 Tauri 的 [依赖项指南](https://tauri.app/start/prerequisites/)。
 - 对于 Windows 用户，请确保至少安装了 `Win10 SDK(10.0.19041.0)` 和 `Visual Studio Build Tools 2022（版本 17.2 或更高）`，此外还需要安装以下组件：
 
   1. Microsoft Visual C++ 2015-2022 Redistributable (x64)
@@ -24,8 +25,8 @@ npm install pake-cli -g
   ```bash
   sudo apt install libdbus-1-dev \
       libsoup2.4-dev \
-      libjavascriptcoregtk-4.0-dev \
-      libwebkit2gtk-4.0-dev \
+      libjavascriptcoregtk-4.1-dev \
+      libwebkit2gtk-4.1-dev \
       build-essential \
       curl \
       wget \
@@ -37,29 +38,9 @@ npm install pake-cli -g
       gnome-video-effects-extra
   ```
 
-## 使用方法
+</details>
 
-### 开发
-
-开发时可以修改 `bin/defaults.ts` 中 `DEFAULT_DEV_PAKE_OPTIONS` 配置，配置项和 `pake-cli` 配置说明保持一致
-
-```typescript
-export const DEFAULT_DEV_PAKE_OPTIONS: PakeCliOptions & { url: string } = {
-  ...DEFAULT_PAKE_OPTIONS,
-  url: 'https://weread.qq.com',
-  name: 'Weread',
-};
-```
-
-之后运行
-
-```bash
-yarn cli:dev
-```
-
-脚本会读取上述配置并使用 `watch` 模式打包指定的 `app`，对 `pake-cli` 代码和 `pake` 的修改都会实时热更新。
-
-### 使用 CLI
+## 命令行使用
 
 ```bash
 pake [url] [options]
@@ -146,6 +127,14 @@ pake [url] [options]
 --always-on-top
 ```
 
+#### [dark-mode]
+
+强制 Mac 打包应用使用黑暗模式，默认为 `false`。
+
+```shell
+--dark-mode
+```
+
 #### [disabled-web-shortcuts]
 
 设置是否禁用原有 Pake 容器里面的网页操作快捷键，默认为 `false`。
@@ -212,6 +201,14 @@ Linux，默认为 `all`。
 --system-tray-icon <path>
 ```
 
+#### [installer-language]
+
+设置 Windows 安装包语言。支持 `zh-CN`、`ja-JP`，更多在 [Tauri 文档](https://tauri.app/distribute/windows-installer/#internationalization)。默认为 `en-US`。
+
+```shell
+--installer-language <language>
+```
+
 #### [use-local-file]
 
 当 `url` 为本地文件路径时，如果启用此选项，则会递归地将 `url` 路径文件所在的文件夹及其所有子文件复
@@ -234,16 +231,12 @@ Linux，默认为 `all`。
 --inject ./tools/style.css --inject ./tools/hotkey.js
 ```
 
-#### [safe-domain]
+#### [proxy-url]
 
-这个安全域名是除你当前配置的 `url` 之外可能会出现重定向或跳转到的其他域名，只有在已配置为安全的域名中，
-
-才能够使用 `tauri` 暴露到浏览器的 `api` ，保证 `pake` 内置增强功能的正确运行。
-
-PS: 安全域名不需要携带协议。
+假如你由于某些缘故需要代理请求，你可以通过 `proxy-url` 选项来设置代理地址。
 
 ```shell
---safe-domain weread.qq.com,google.com
+--proxy-url <url>
 ```
 
 #### [debug]
@@ -254,6 +247,43 @@ PS: 安全域名不需要携带协议。
 --debug
 ```
 
-## 结语
+### 稍等片刻
 
 完成上述步骤后，您的应用程序应该已经成功打包。请注意，根据您的系统配置和网络状况，打包过程可能需要一些时间。请耐心等待，一旦打包完成，您就可以在指定的目录中找到应用程序安装包。
+
+## 开发调试
+
+开发时可以修改 `bin/defaults.ts` 中 `DEFAULT_DEV_PAKE_OPTIONS` 配置，配置项和 `pake-cli` 配置说明保持一致
+
+```typescript
+export const DEFAULT_DEV_PAKE_OPTIONS: PakeCliOptions & { url: string } = {
+  ...DEFAULT_PAKE_OPTIONS,
+  url: 'https://weread.qq.com',
+  name: 'Weread',
+};
+```
+
+之后运行
+
+```bash
+npm run cli:dev
+```
+
+脚本会读取上述配置并使用 `watch` 模式打包指定的 `app`，对 `pake-cli` 代码和 `pake` 的修改都会实时热更新。
+
+## Docker 使用
+
+```shell
+# 在Linux上，您可以通过 Docker 运行 Pake CLI。
+docker run -it --rm \ # Run interactively, remove container after exit
+    -v YOUR_DIR:/output \ # Files from container's /output will be in YOU_DIR
+    ghcr.io/tw93/pake \
+    <arguments>
+
+# For example:
+docker run -it --rm \
+    -v ./packages:/output \
+    ghcr.io/tw93/pake \
+    https://example.com --name myapp --icon ./icon.png
+
+```

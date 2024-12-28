@@ -39,11 +39,7 @@ if (process.env.TARGETS) {
   params = `${params} --targets ${process.env.TARGETS}`;
 }
 
-if (process.platform === 'win32') {
-  params = `${params} --show-system-tray`;
-}
-
-if (process.platform === 'linux') {
+if (process.platform === 'win32' || process.platform === 'linux') {
   params = `${params} --show-system-tray`;
 }
 

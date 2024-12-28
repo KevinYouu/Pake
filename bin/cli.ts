@@ -30,27 +30,27 @@ program
   .option('--fullscreen', 'Start in full screen', DEFAULT.fullscreen)
   .option('--hide-title-bar', 'Only for Mac, hide title bar', DEFAULT.hideTitleBar)
   .option('--activation-shortcut <string>', 'Shortcut key to active App', DEFAULT.activationShortcut)
-  .option('--multi-arch', 'Only for Mac, supports both Intel and M1', DEFAULT.multiArch)
-  .option('--inject [injects...]', 'Injection of .js or .css Files', DEFAULT.inject)
+  .option('--inject <url>', 'Injection of .js or .css files', DEFAULT.inject)
+  .option('--proxy-url <url>', "Proxy URL for all network requests", DEFAULT.proxyUrl)
   .option('--debug', 'Debug build and more output', DEFAULT.debug)
+  .option('--multi-arch', 'Only for Mac, supports both Intel and M1', DEFAULT.multiArch)
   .addOption(new Option('--user-agent <string>', 'Custom user agent').default(DEFAULT.userAgent).hideHelp())
   .addOption(
     new Option('--targets <string>', 'Only for Linux, option "deb" or "appimage"').default(DEFAULT.targets).hideHelp(),
   )
   .addOption(new Option('--always-on-top', 'Always on the top level').default(DEFAULT.alwaysOnTop).hideHelp())
+  .addOption(new Option('--dark-mode', 'Force Mac app to use dark mode').default(DEFAULT.darkMode).hideHelp())
   .addOption(
     new Option('--disabled-web-shortcuts', 'Disabled webPage shortcuts')
       .default(DEFAULT.disabledWebShortcuts)
       .hideHelp(),
   )
-  .addOption(
-    new Option('--safe-domain [domains...]', 'Domains that Require Security Configuration')
-      .default(DEFAULT.safeDomain)
-      .hideHelp(),
-  )
   .addOption(new Option('--show-system-tray', 'Show system tray in app').default(DEFAULT.showSystemTray).hideHelp())
   .addOption(
     new Option('--system-tray-icon <string>', 'Custom system tray icon').default(DEFAULT.systemTrayIcon).hideHelp(),
+  )
+  .addOption(
+    new Option('--installer-language <string>', 'Installer language').default(DEFAULT.installerLanguage).hideHelp(),
   )
   .version(packageJson.version, '-v, --version', 'Output the current version')
   .action(async (url: string, options: PakeCliOptions) => {
