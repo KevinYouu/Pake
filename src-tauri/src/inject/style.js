@@ -400,19 +400,12 @@ window.addEventListener('DOMContentLoaded', _event => {
       top: 28px;
     }
 
-    #pake-top-dom:active {
-      cursor: grabbing;
-      cursor: -webkit-grabbing;
-    }
-
     #pake-top-dom{
       position:fixed;
       background:transparent;
       top:0;
       width: 100%;
       height: 20px;
-      cursor: grab;
-      -webkit-app-region: drag;
       user-select: none;
       -webkit-user-select: none;
       z-index: 99999;

@@ -26,7 +26,7 @@ pub fn get_window(app: &mut App, config: &PakeConfig, _data_dir: PathBuf) -> Web
 
     let mut window_builder = WebviewWindowBuilder::new(app, "pake", url)
         .title("")
-        .visible(false)
+        .visible(true)
         .user_agent(user_agent)
         .resizable(window_config.resizable)
         .fullscreen(window_config.fullscreen)
