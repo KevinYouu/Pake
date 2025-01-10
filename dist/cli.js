@@ -19,8 +19,8 @@ import { fileTypeFromBuffer } from 'file-type';
 import * as psl from 'psl';
 import isUrl from 'is-url';
 
-var name = "pake-cli-kevin";
-var version$1 = "3.0.3";
+var name = "pake-cli";
+var version$1 = "3.1.1";
 var description = "🤱🏻 Turn any webpage into a desktop app with Rust. 🤱🏻 利用 Rust 轻松构建轻量级多端桌面应用。";
 var engines = {
 	node: ">=16.0.0"
@@ -70,7 +70,7 @@ var dependencies = {
 	"@tauri-apps/api": "^1.6.0",
 	"@tauri-apps/cli": "^2.1.0",
 	axios: "^1.7.9",
-	chalk: "^5.4.0",
+	chalk: "^5.4.1",
 	commander: "^11.1.0",
 	"file-type": "^18.7.0",
 	"fs-extra": "^11.2.0",
@@ -265,7 +265,6 @@ let tauriConfig = {
     app: {
         ...CommonConf.app,
         trayIcon: {
-            ...CommonConf.app.trayIcon,
             ...(platformConfig?.app?.trayIcon ?? {}),
         },
     },
@@ -320,7 +319,7 @@ function shellExec(command) {
                 resolve(0);
             }
             else {
-                reject(new Error(`${code}`));
+                reject(new Error(`Error occurred while executing command "${command}". Exit code: ${code}`));
             }
         });
     });
@@ -426,7 +425,7 @@ async function combineFiles(files, output) {
 }
 
 async function mergeConfig(url, options, tauriConf) {
-    const { width, height, fullscreen, hideTitleBar, alwaysOnTop, darkMode, disabledWebShortcuts, activationShortcut, userAgent, showSystemTray, systemTrayIcon, useLocalFile, identifier, name, resizable = true, inject, proxyUrl, installerLanguage, } = options;
+    const { width, height, fullscreen, hideTitleBar, alwaysOnTop, appVersion, darkMode, disabledWebShortcuts, activationShortcut, userAgent, showSystemTray, systemTrayIcon, useLocalFile, identifier, name, resizable = true, inject, proxyUrl, installerLanguage, } = options;
     const { platform } = process;
     // Set Windows parameters.
     const tauriConfWindowOptions = {
@@ -443,6 +442,7 @@ async function mergeConfig(url, options, tauriConf) {
     Object.assign(tauriConf.pake.windows[0], { url, ...tauriConfWindowOptions });
     tauriConf.productName = name;
     tauriConf.identifier = identifier;
+    tauriConf.version = appVersion;
     if (platform == 'win32') {
         tauriConf.bundle.windows.wix.language[0] = installerLanguage;
     }
@@ -486,9 +486,9 @@ async function mergeConfig(url, options, tauriConf) {
     // Processing targets are currently only open to Linux.
     if (platform === 'linux') {
         delete tauriConf.bundle.linux.deb.files;
-        const validTargets = ['all', 'deb', 'appimage', 'rpm'];
+        const validTargets = ['deb', 'appimage', 'rpm'];
         if (validTargets.includes(options.targets)) {
-            tauriConf.bundle.targets = options.targets === 'all' ? ['deb', 'appimage', 'rpm'] : [options.targets];
+            tauriConf.bundle.targets = [options.targets];
         }
         else {
             logger.warn(`✼ The target must be one of ${validTargets.join(', ')}, the default 'deb' will be used.`);
@@ -610,7 +610,7 @@ class BaseBuilder {
         const tauriTargetPathExists = await fsExtra.pathExists(tauriTargetPath);
         if (!IS_MAC && !tauriTargetPathExists) {
             logger.warn('✼ The first use requires installing system dependencies.');
-            logger.warn('✼ See more in https://tauri.app/guides/getting-started/prerequisites.');
+            logger.warn('✼ See more in https://tauri.app/start/prerequisites/.');
         }
         if (!checkRustInstalled()) {
             const res = await prompts({
@@ -728,15 +728,23 @@ class LinuxBuilder extends BaseBuilder {
         super(options);
     }
     getFileName() {
-        const { name } = this.options;
-        const arch = process.arch === 'x64' ? 'amd64' : process.arch;
-        return `${name}_${tauriConfig.version}_${arch}`;
+        const { name, targets } = this.options;
+        const version = tauriConfig.version;
+        let arch = process.arch === 'x64' ? 'amd64' : process.arch;
+        if (arch === 'arm64' && (targets === 'rpm' || targets === 'appimage')) {
+            arch = 'aarch64';
+        }
+        // The RPM format uses different separators and version number formats
+        if (targets === 'rpm') {
+            return `${name}-${version}-1.${arch}`;
+        }
+        return `${name}_${version}_${arch}`;
     }
     // Customize it, considering that there are all targets.
     async build(url) {
-        const targetTypes = ['deb', 'appimage'];
+        const targetTypes = ['deb', 'appimage', 'rpm'];
         for (const target of targetTypes) {
-            if (this.options.targets === target || this.options.targets === 'all') {
+            if (this.options.targets === target) {
                 await this.buildAndCopy(url, target);
             }
         }
@@ -773,6 +781,7 @@ const DEFAULT_PAKE_OPTIONS = {
     resizable: true,
     hideTitleBar: false,
     alwaysOnTop: false,
+    appVersion: '1.0.0',
     darkMode: false,
     disabledWebShortcuts: false,
     activationShortcut: '',
@@ -966,19 +975,18 @@ program
     .option('--height <number>', 'Window height', validateNumberInput, DEFAULT_PAKE_OPTIONS.height)
     .option('--use-local-file', 'Use local file packaging', DEFAULT_PAKE_OPTIONS.useLocalFile)
     .option('--fullscreen', 'Start in full screen', DEFAULT_PAKE_OPTIONS.fullscreen)
-    .option('--hide-title-bar', 'Only for Mac, hide title bar', DEFAULT_PAKE_OPTIONS.hideTitleBar)
-    .option('--activation-shortcut <string>', 'Shortcut key to active App', DEFAULT_PAKE_OPTIONS.activationShortcut)
+    .option('--hide-title-bar', 'For Mac, hide title bar', DEFAULT_PAKE_OPTIONS.hideTitleBar)
+    .option('--multi-arch', 'For Mac, both Intel and M1', DEFAULT_PAKE_OPTIONS.multiArch)
     .option('--inject <url>', 'Injection of .js or .css files', DEFAULT_PAKE_OPTIONS.inject)
-    .option('--proxy-url <url>', "Proxy URL for all network requests", DEFAULT_PAKE_OPTIONS.proxyUrl)
     .option('--debug', 'Debug build and more output', DEFAULT_PAKE_OPTIONS.debug)
-    .option('--multi-arch', 'Only for Mac, supports both Intel and M1', DEFAULT_PAKE_OPTIONS.multiArch)
+    .addOption(new Option('--proxy-url <url>', 'Proxy URL for all network requests').default(DEFAULT_PAKE_OPTIONS.proxyUrl).hideHelp())
     .addOption(new Option('--user-agent <string>', 'Custom user agent').default(DEFAULT_PAKE_OPTIONS.userAgent).hideHelp())
-    .addOption(new Option('--targets <string>', 'Only for Linux, option "deb" or "appimage"').default(DEFAULT_PAKE_OPTIONS.targets).hideHelp())
+    .addOption(new Option('--targets <string>', 'For Linux, option "deb" or "appimage"').default(DEFAULT_PAKE_OPTIONS.targets).hideHelp())
+    .addOption(new Option('--app-version <string>', 'App version, the same as package.json version').default(DEFAULT_PAKE_OPTIONS.appVersion).hideHelp())
     .addOption(new Option('--always-on-top', 'Always on the top level').default(DEFAULT_PAKE_OPTIONS.alwaysOnTop).hideHelp())
     .addOption(new Option('--dark-mode', 'Force Mac app to use dark mode').default(DEFAULT_PAKE_OPTIONS.darkMode).hideHelp())
-    .addOption(new Option('--disabled-web-shortcuts', 'Disabled webPage shortcuts')
-    .default(DEFAULT_PAKE_OPTIONS.disabledWebShortcuts)
-    .hideHelp())
+    .addOption(new Option('--disabled-web-shortcuts', 'Disabled webPage shortcuts').default(DEFAULT_PAKE_OPTIONS.disabledWebShortcuts).hideHelp())
+    .addOption(new Option('--activation-shortcut <string>', 'Shortcut key to active App').default(DEFAULT_PAKE_OPTIONS.activationShortcut).hideHelp())
     .addOption(new Option('--show-system-tray', 'Show system tray in app').default(DEFAULT_PAKE_OPTIONS.showSystemTray).hideHelp())
     .addOption(new Option('--system-tray-icon <string>', 'Custom system tray icon').default(DEFAULT_PAKE_OPTIONS.systemTrayIcon).hideHelp())
     .addOption(new Option('--installer-language <string>', 'Installer language').default(DEFAULT_PAKE_OPTIONS.installerLanguage).hideHelp())

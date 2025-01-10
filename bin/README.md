@@ -127,6 +127,14 @@ Sets whether the window is always at the top level, defaults to `false`.
 --always-on-top
 ```
 
+#### [app-version]
+
+Set the version number of the packaged application to be consistent with the naming format of version in package.json, defaulting to `1.0.0`.
+
+```shell
+--app-version <string>
+```
+
 #### [dark-mode]
 
 Force Mac to package applications using dark mode, default is `false`.
@@ -170,7 +178,7 @@ Package the application to support both Intel and M1 chips, exclusively for macO
 
 #### [targets]
 
-Select the output package format for Linux. Options include `deb`, `appimage`, or `all`. If `all` is selected, both `deb` and `appimage` will be packaged. Default is `all`.
+Choose the output package format, supporting `deb`, `appimage`, `rpm`, This option is only applicable to Linux and defaults to `deb`.
 
 ```shell
 --targets <format>

@@ -14,6 +14,7 @@ export async function mergeConfig(url: string, options: PakeAppOptions, tauriCon
     fullscreen,
     hideTitleBar,
     alwaysOnTop,
+    appVersion,
     darkMode,
     disabledWebShortcuts,
     activationShortcut,
@@ -47,6 +48,7 @@ export async function mergeConfig(url: string, options: PakeAppOptions, tauriCon
 
   tauriConf.productName = name;
   tauriConf.identifier = identifier;
+  tauriConf.version = appVersion;
 
   if (platform == 'win32') {
     tauriConf.bundle.windows.wix.language[0] = installerLanguage;
@@ -99,9 +101,9 @@ export async function mergeConfig(url: string, options: PakeAppOptions, tauriCon
   // Processing targets are currently only open to Linux.
   if (platform === 'linux') {
     delete tauriConf.bundle.linux.deb.files;
-    const validTargets = ['all', 'deb', 'appimage', 'rpm'];
+    const validTargets = ['deb', 'appimage', 'rpm'];
     if (validTargets.includes(options.targets)) {
-      tauriConf.bundle.targets = options.targets === 'all' ? ['deb', 'appimage', 'rpm'] : [options.targets];
+      tauriConf.bundle.targets = [options.targets];
     } else {
       logger.warn(`✼ The target must be one of ${validTargets.join(', ')}, the default 'deb' will be used.`);
     }
