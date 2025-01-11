@@ -6,9 +6,6 @@ use tauri::Manager;
 use tauri_plugin_window_state::Builder as WindowStatePlugin;
 use tauri_plugin_window_state::StateFlags;
 
-#[cfg(target_os = "macos")]
-use std::time::Duration;
-
 use app::{
     invoke::{download_file, download_file_by_binary, send_notification},
     setup::{set_global_shortcut, set_system_tray},

@@ -30,7 +30,7 @@ pub fn set_window(app: &mut App, config: &PakeConfig, tauri_config: &Config) -> 
 
     let mut window_builder = WebviewWindowBuilder::new(app, "pake", url)
         .title("")
-        .visible(true)
+        .visible(false)
         .user_agent(user_agent)
         .resizable(window_config.resizable)
         .fullscreen(window_config.fullscreen)

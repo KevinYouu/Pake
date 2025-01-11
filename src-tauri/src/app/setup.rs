@@ -7,7 +7,6 @@ use tauri::{
     AppHandle, Manager,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
-use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 pub fn set_system_tray(app: &AppHandle, show_system_tray: bool) -> tauri::Result<()> {
     if !show_system_tray {
@@ -39,8 +38,7 @@ pub fn set_system_tray(app: &AppHandle, show_system_tray: bool) -> tauri::Result
                 }
             }
             "quit" => {
-                app.save_window_state(StateFlags::all()).unwrap();
-                std::process::exit(0);
+                app.exit(0);
             }
             _ => (),
         })
