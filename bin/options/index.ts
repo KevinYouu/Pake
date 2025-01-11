@@ -49,7 +49,7 @@ export default async function handleOptions(options: PakeCliOptions, url: string
   const appOptions: PakeAppOptions = {
     ...options,
     name,
-    identifier: getIdentifier(url),
+    identifier: getIdentifier(url + name),
   };
 
   appOptions.icon = await handleIcon(appOptions);
