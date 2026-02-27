@@ -1,4 +1,4 @@
-use crate::app::window::open_additional_window;
+use crate::app::window::open_additional_window_safe;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -43,10 +43,7 @@ pub fn set_system_tray(
         .menu(&menu)
         .on_menu_event(move |app, event| match event.id().as_ref() {
             "new_window" => {
-                if let Ok(window) = open_additional_window(app) {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+                open_additional_window_safe(app);
             }
             "hide_app" => {
                 if let Some(window) = app.get_webview_window("pake") {

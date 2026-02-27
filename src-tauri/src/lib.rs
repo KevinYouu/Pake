@@ -17,7 +17,7 @@ use app::{
         update_theme_mode,
     },
     setup::{set_global_shortcut, set_system_tray},
-    window::{open_additional_window, set_window, MultiWindowState},
+    window::{open_additional_window_safe, set_window, MultiWindowState},
 };
 use util::get_pake_config;
 
@@ -63,10 +63,7 @@ pub fn run_app() {
         app_builder = app_builder.plugin(tauri_plugin_single_instance::init(
             move |app, _args, _cwd| {
                 if multi_window {
-                    if let Ok(window) = open_additional_window(app) {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
+                    open_additional_window_safe(app);
                 } else if let Some(window) = app.get_webview_window("pake") {
                     let _ = window.unminimize();
                     let _ = window.show();
@@ -93,7 +90,7 @@ pub fn run_app() {
             // --- Menu Construction Start ---
             #[cfg(target_os = "macos")]
             {
-                let menu = app::menu::get_menu(app.app_handle())?;
+                let menu = app::menu::get_menu(app.app_handle(), multi_window)?;
                 app.set_menu(menu)?;
 
                 // Event Handling for Custom Menu Item

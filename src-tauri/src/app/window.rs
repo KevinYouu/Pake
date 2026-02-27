@@ -54,6 +54,27 @@ pub fn open_additional_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     build_window_with_label(app, &state.pake_config, &state.tauri_config, &label)
 }
 
+pub fn open_additional_window_safe(app: &AppHandle) {
+    #[cfg(target_os = "windows")]
+    {
+        let app_handle = app.clone();
+        std::thread::spawn(move || {
+            if let Ok(window) = open_additional_window(&app_handle) {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Ok(window) = open_additional_window(app) {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }
+}
+
 fn build_window_with_label(
     app: &AppHandle,
     config: &PakeConfig,
