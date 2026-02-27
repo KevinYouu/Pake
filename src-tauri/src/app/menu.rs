@@ -1,6 +1,7 @@
 // Menu functionality is only used on macOS
 #![cfg(target_os = "macos")]
 
+use crate::app::window::open_additional_window;
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Manager, Wry};
 use tauri_plugin_opener::OpenerExt;
@@ -46,6 +47,14 @@ fn app_menu(app: &AppHandle<Wry>) -> tauri::Result<Submenu<Wry>> {
 
 fn file_menu(app: &AppHandle<Wry>) -> tauri::Result<Submenu<Wry>> {
     let file_menu = Submenu::new(app, "File", true)?;
+    file_menu.append(&MenuItem::with_id(
+        app,
+        "new_window",
+        "New Window",
+        true,
+        Some("CmdOrCtrl+N"),
+    )?)?;
+    file_menu.append(&PredefinedMenuItem::separator(app)?)?;
     file_menu.append(&PredefinedMenuItem::close_window(app, None)?)?;
     file_menu.append(&PredefinedMenuItem::separator(app)?)?;
     file_menu.append(&MenuItem::with_id(
@@ -181,6 +190,12 @@ fn help_menu(app: &AppHandle<Wry>, title: &str) -> tauri::Result<Submenu<Wry>> {
 
 pub fn handle_menu_click(app_handle: &AppHandle, id: &str) {
     match id {
+        "new_window" => {
+            if let Ok(window) = open_additional_window(app_handle) {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }
         "pake_github_link" => {
             let _ = app_handle
                 .opener()

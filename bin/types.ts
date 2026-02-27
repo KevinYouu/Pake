@@ -94,6 +94,9 @@ export interface PakeCliOptions {
   // Allow multiple instances, default false (single instance)
   multiInstance: boolean;
 
+  // Allow opening multiple windows in one app instance, default false
+  multiWindow: boolean;
+
   // Start app minimized to tray, default false
   startToTray: boolean;
 
@@ -163,4 +166,5 @@ export interface PakeConfig {
   system_tray_path: string;
   proxy_url: string;
   multi_instance: boolean;
+  multi_window: boolean;
 }

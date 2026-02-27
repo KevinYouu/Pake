@@ -35,5 +35,6 @@
   "system_tray_path": "icons/icon.png",
   "inject": [],
   "proxy_url": "",
-  "multi_instance": false
+  "multi_instance": false,
+  "multi_window": false
 }
