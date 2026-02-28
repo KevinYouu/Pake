@@ -1,11 +1,12 @@
 // Menu functionality is only used on macOS
 #![cfg(target_os = "macos")]
 
+use crate::app::window::open_additional_window_safe;
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Manager, Wry};
 use tauri_plugin_opener::OpenerExt;
 
-pub fn get_menu(app: &AppHandle<Wry>) -> tauri::Result<Menu<Wry>> {
+pub fn get_menu(app: &AppHandle<Wry>, allow_multi_window: bool) -> tauri::Result<Menu<Wry>> {
     let pake_version = env!("CARGO_PKG_VERSION");
     let pake_menu_item_title = format!("Built with Pake V{}", pake_version);
 
@@ -13,7 +14,7 @@ pub fn get_menu(app: &AppHandle<Wry>) -> tauri::Result<Menu<Wry>> {
         app,
         &[
             &app_menu(app)?,
-            &file_menu(app)?,
+            &file_menu(app, allow_multi_window)?,
             &edit_menu(app)?,
             &view_menu(app)?,
             &navigation_menu(app)?,
@@ -44,8 +45,18 @@ fn app_menu(app: &AppHandle<Wry>) -> tauri::Result<Submenu<Wry>> {
     Ok(app_menu)
 }
 
-fn file_menu(app: &AppHandle<Wry>) -> tauri::Result<Submenu<Wry>> {
+fn file_menu(app: &AppHandle<Wry>, allow_multi_window: bool) -> tauri::Result<Submenu<Wry>> {
     let file_menu = Submenu::new(app, "File", true)?;
+    if allow_multi_window {
+        file_menu.append(&MenuItem::with_id(
+            app,
+            "new_window",
+            "New Window",
+            true,
+            Some("CmdOrCtrl+N"),
+        )?)?;
+        file_menu.append(&PredefinedMenuItem::separator(app)?)?;
+    }
     file_menu.append(&PredefinedMenuItem::close_window(app, None)?)?;
     file_menu.append(&PredefinedMenuItem::separator(app)?)?;
     file_menu.append(&MenuItem::with_id(
@@ -181,6 +192,9 @@ fn help_menu(app: &AppHandle<Wry>, title: &str) -> tauri::Result<Submenu<Wry>> {
 
 pub fn handle_menu_click(app_handle: &AppHandle, id: &str) {
     match id {
+        "new_window" => {
+            open_additional_window_safe(app_handle);
+        }
         "pake_github_link" => {
             let _ = app_handle
                 .opener()

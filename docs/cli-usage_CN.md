@@ -418,6 +418,24 @@ pake https://github.com --name GitHub --keep-binary
 pake https://chat.example.com --name ChatApp --multi-instance
 ```
 
+#### [multi-window]
+
+允许在单个运行中的应用实例内打开多个窗口，默认值为 `false`。
+
+它和 `--multi-instance` 的区别：
+
+- `--multi-instance`：启动多个应用进程。
+- `--multi-window`：保持单进程，在该进程内打开多个窗口。
+
+启用后，如果应用已在运行，再次启动会新开一个窗口，而不是仅聚焦已有窗口。
+
+```shell
+--multi-window
+
+# 示例：单进程多窗口
+pake https://chat.example.com --name ChatApp --multi-window
+```
+
 #### [installer-language]
 
 设置 Windows 安装包语言。支持 `zh-CN`、`ja-JP`，更多在 [Tauri 文档](https://tauri.app/distribute/windows-installer/#internationalization)。默认为 `en-US`。

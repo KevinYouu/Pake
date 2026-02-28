@@ -70,6 +70,7 @@ export async function mergeConfig(
     wasm,
     enableDragDrop,
     multiInstance,
+    multiWindow,
     startToTray,
     forceInternalNavigation,
     zoom,
@@ -370,6 +371,7 @@ Terminal=false
   }
   tauriConf.pake.proxy_url = proxyUrl || '';
   tauriConf.pake.multi_instance = multiInstance;
+  tauriConf.pake.multi_window = multiWindow;
 
   // Configure WASM support with required HTTP headers
   if (wasm) {

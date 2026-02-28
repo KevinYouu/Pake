@@ -420,6 +420,24 @@ Allow the packaged app to run more than one instance at the same time. Default i
 pake https://chat.example.com --name ChatApp --multi-instance
 ```
 
+#### [multi-window]
+
+Allow opening multiple windows within a single running app instance. Default is `false`.
+
+This is different from `--multi-instance`:
+
+- `--multi-instance`: starts multiple app processes.
+- `--multi-window`: keeps one process and opens extra windows from that process.
+
+When enabled, relaunching an already running app opens a new window instead of only focusing the existing one.
+
+```shell
+--multi-window
+
+# Example: Keep one process but open multiple windows
+pake https://chat.example.com --name ChatApp --multi-window
+```
+
 #### [installer-language]
 
 Set the Windows Installer language. Options include `zh-CN`, `ja-JP`, More at [Tauri Document](https://tauri.app/distribute/windows-installer/#internationalization). Default is `en-US`.

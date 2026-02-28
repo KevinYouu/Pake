@@ -1,3 +1,4 @@
+use crate::app::window::open_additional_window_safe;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -14,25 +15,36 @@ pub fn set_system_tray(
     show_system_tray: bool,
     tray_icon_path: &str,
     _init_fullscreen: bool,
+    allow_multi_window: bool,
 ) -> tauri::Result<()> {
     if !show_system_tray {
         app.remove_tray_by_id("pake-tray");
         return Ok(());
     }
 
+    let new_window = MenuItemBuilder::with_id("new_window", "New Window").build(app)?;
     let hide_app = MenuItemBuilder::with_id("hide_app", "Hide").build(app)?;
     let show_app = MenuItemBuilder::with_id("show_app", "Show").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
-    let menu = MenuBuilder::new(app)
-        .items(&[&hide_app, &show_app, &quit])
-        .build()?;
+    let menu = if allow_multi_window {
+        MenuBuilder::new(app)
+            .items(&[&new_window, &hide_app, &show_app, &quit])
+            .build()?
+    } else {
+        MenuBuilder::new(app)
+            .items(&[&hide_app, &show_app, &quit])
+            .build()?
+    };
 
     app.app_handle().remove_tray_by_id("pake-tray");
 
     let tray = TrayIconBuilder::new()
         .menu(&menu)
         .on_menu_event(move |app, event| match event.id().as_ref() {
+            "new_window" => {
+                open_additional_window_safe(app);
+            }
             "hide_app" => {
                 if let Some(window) = app.get_webview_window("pake") {
                     window.minimize().unwrap();
