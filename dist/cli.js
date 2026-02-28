@@ -484,7 +484,7 @@ async function mergeConfig(url, options, tauriConf) {
             await fsExtra.copy(sourcePath, destPath);
         }
     }));
-    const { width, height, fullscreen, maximize, hideTitleBar, alwaysOnTop, appVersion, darkMode, disabledWebShortcuts, activationShortcut, userAgent, showSystemTray, systemTrayIcon, useLocalFile, identifier, name = 'pake-app', resizable = true, inject, proxyUrl, installerLanguage, hideOnClose, incognito, title, wasm, enableDragDrop, multiInstance, multiWindow, startToTray, forceInternalNavigation, zoom, minWidth, minHeight, ignoreCertificateErrors, newWindow, } = options;
+    const { width, height, fullscreen, maximize, hideTitleBar, alwaysOnTop, appVersion, darkMode, disabledWebShortcuts, activationShortcut, userAgent, showSystemTray, systemTrayIcon, useLocalFile, identifier, name = 'pake-app', resizable = true, inject, proxyUrl, installerLanguage, hideOnClose, incognito, title, wasm, enableDragDrop, multiInstance, multiWindow, startToTray, forceInternalNavigation, internalUrlRegex, zoom, minWidth, minHeight, ignoreCertificateErrors, newWindow, } = options;
     const { platform } = process;
     const platformHideOnClose = hideOnClose ?? platform === 'darwin';
     const tauriConfWindowOptions = {
@@ -505,6 +505,7 @@ async function mergeConfig(url, options, tauriConf) {
         enable_drag_drop: enableDragDrop,
         start_to_tray: startToTray && showSystemTray,
         force_internal_navigation: forceInternalNavigation,
+        internal_url_regex: internalUrlRegex,
         zoom,
         min_width: minWidth,
         min_height: minHeight,
@@ -1398,6 +1399,108 @@ class BuilderProvider {
     }
 }
 
+const ICO_HEADER_SIZE = 6;
+const ICO_DIR_ENTRY_SIZE = 16;
+const ICO_TYPE_ICON = 1;
+function decodeDimension(value) {
+    return value === 0 ? 256 : value;
+}
+function compareByPreferredSize(preferredSize) {
+    return (a, b) => {
+        const aSize = Math.max(a.width, a.height);
+        const bSize = Math.max(b.width, b.height);
+        const aExact = aSize === preferredSize ? 0 : 1;
+        const bExact = bSize === preferredSize ? 0 : 1;
+        if (aExact !== bExact)
+            return aExact - bExact;
+        const aDistance = Math.abs(aSize - preferredSize);
+        const bDistance = Math.abs(bSize - preferredSize);
+        if (aDistance !== bDistance)
+            return aDistance - bDistance;
+        const aSmaller = aSize < preferredSize ? 1 : 0;
+        const bSmaller = bSize < preferredSize ? 1 : 0;
+        if (aSmaller !== bSmaller)
+            return aSmaller - bSmaller;
+        if (a.bitCount !== b.bitCount)
+            return b.bitCount - a.bitCount;
+        if (aSize !== bSize)
+            return bSize - aSize;
+        return a.index - b.index;
+    };
+}
+function parseIcoBuffer(buffer) {
+    if (buffer.length < ICO_HEADER_SIZE) {
+        throw new Error('Invalid ICO: header too short.');
+    }
+    const reserved = buffer.readUInt16LE(0);
+    const type = buffer.readUInt16LE(2);
+    const count = buffer.readUInt16LE(4);
+    if (reserved !== 0 || type !== ICO_TYPE_ICON || count < 1) {
+        throw new Error('Invalid ICO: invalid header.');
+    }
+    const tableSize = ICO_HEADER_SIZE + count * ICO_DIR_ENTRY_SIZE;
+    if (buffer.length < tableSize) {
+        throw new Error('Invalid ICO: directory table too short.');
+    }
+    const entries = [];
+    for (let i = 0; i < count; i++) {
+        const offset = ICO_HEADER_SIZE + i * ICO_DIR_ENTRY_SIZE;
+        const widthByte = buffer.readUInt8(offset);
+        const heightByte = buffer.readUInt8(offset + 1);
+        const bitCount = buffer.readUInt16LE(offset + 6);
+        const bytesInRes = buffer.readUInt32LE(offset + 8);
+        const imageOffset = buffer.readUInt32LE(offset + 12);
+        if (bytesInRes < 1 || imageOffset + bytesInRes > buffer.length) {
+            throw new Error('Invalid ICO: frame out of bounds.');
+        }
+        entries.push({
+            index: i,
+            width: decodeDimension(widthByte),
+            height: decodeDimension(heightByte),
+            bitCount,
+            bytesInRes,
+            imageOffset,
+            directory: buffer.subarray(offset, offset + ICO_DIR_ENTRY_SIZE),
+            data: buffer.subarray(imageOffset, imageOffset + bytesInRes),
+        });
+    }
+    return entries;
+}
+function buildReorderedIcoBuffer(buffer, preferredSize) {
+    const entries = parseIcoBuffer(buffer);
+    const ordered = [...entries].sort(compareByPreferredSize(preferredSize));
+    const count = ordered.length;
+    const tableSize = ICO_HEADER_SIZE + count * ICO_DIR_ENTRY_SIZE;
+    const payloadSize = ordered.reduce((acc, entry) => acc + entry.data.length, 0);
+    const output = Buffer.alloc(tableSize + payloadSize);
+    output.writeUInt16LE(0, 0);
+    output.writeUInt16LE(ICO_TYPE_ICON, 2);
+    output.writeUInt16LE(count, 4);
+    let currentOffset = tableSize;
+    for (let i = 0; i < count; i++) {
+        const entry = ordered[i];
+        const entryOffset = ICO_HEADER_SIZE + i * ICO_DIR_ENTRY_SIZE;
+        entry.directory.copy(output, entryOffset, 0, 8);
+        output.writeUInt32LE(entry.data.length, entryOffset + 8);
+        output.writeUInt32LE(currentOffset, entryOffset + 12);
+        entry.data.copy(output, currentOffset);
+        currentOffset += entry.data.length;
+    }
+    return output;
+}
+async function writeIcoWithPreferredSize(sourcePath, outputPath, preferredSize) {
+    try {
+        const sourceBuffer = await fsExtra.readFile(sourcePath);
+        const reordered = buildReorderedIcoBuffer(sourceBuffer, preferredSize);
+        await fsExtra.ensureDir(path.dirname(outputPath));
+        await fsExtra.outputFile(outputPath, reordered);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+
 const ICON_CONFIG = {
     minFileSize: 100,
     supportedFormats: ['png', 'ico', 'jpeg', 'jpg', 'webp', 'icns'],
@@ -1441,7 +1544,11 @@ async function copyWindowsIconIfNeeded(convertedPath, appName) {
     try {
         const finalIconPath = generateIconPath(appName);
         await fsExtra.ensureDir(path.dirname(finalIconPath));
-        await fsExtra.copy(convertedPath, finalIconPath);
+        // Reorder ICO to prioritize 256px icons for better Windows display
+        const reordered = await writeIcoWithPreferredSize(convertedPath, finalIconPath, 256);
+        if (!reordered) {
+            await fsExtra.copy(convertedPath, finalIconPath);
+        }
         return finalIconPath;
     }
     catch (error) {
@@ -1937,6 +2044,7 @@ const DEFAULT_PAKE_OPTIONS = {
     multiWindow: false,
     startToTray: false,
     forceInternalNavigation: false,
+    internalUrlRegex: '',
     iterativeBuild: false,
     zoom: 100,
     minWidth: 0,
@@ -2068,6 +2176,9 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .hideHelp())
         .addOption(new Option('--force-internal-navigation', 'Keep every link inside the Pake window instead of opening external handlers')
         .default(DEFAULT_PAKE_OPTIONS.forceInternalNavigation)
+        .hideHelp())
+        .addOption(new Option('--internal-url-regex <string>', 'Regex pattern to match URLs that should be considered internal')
+        .default(DEFAULT_PAKE_OPTIONS.internalUrlRegex)
         .hideHelp())
         .addOption(new Option('--installer-language <string>', 'Installer language')
         .default(DEFAULT_PAKE_OPTIONS.installerLanguage)
