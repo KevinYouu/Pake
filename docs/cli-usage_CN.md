@@ -236,6 +236,20 @@ pake https://github.com --name GitHub
 --force-internal-navigation
 ```
 
+#### [internal-url-regex]
+
+设置一个正则表达式来判断哪些 URL 应被视为内部链接（在应用内打开）。设置后，此正则表达式将优先于默认的域名匹配逻辑。适用于只想让特定路径在应用内打开的场景。
+
+```shell
+--internal-url-regex <pattern>
+
+# 示例：只把 facebook.com/messages 路径视为内部链接
+--internal-url-regex "^https://www\\.facebook\\.com/messages(/.*)?$"
+
+# 示例：只把特定子域名视为内部链接
+--internal-url-regex "^https://(app|api)\\.example\\.com"
+```
+
 #### [multi-arch]
 
 设置打包结果同时支持 Intel 和 M1 芯片，仅适用于 macOS，默认为 `false`。

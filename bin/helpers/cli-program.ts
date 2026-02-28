@@ -185,6 +185,14 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .hideHelp(),
     )
     .addOption(
+      new Option(
+        '--internal-url-regex <string>',
+        'Regex pattern to match URLs that should be considered internal',
+      )
+        .default(DEFAULT.internalUrlRegex)
+        .hideHelp(),
+    )
+    .addOption(
       new Option('--installer-language <string>', 'Installer language')
         .default(DEFAULT.installerLanguage)
         .hideHelp(),

@@ -43,6 +43,7 @@ export const DEFAULT_PAKE_OPTIONS: PakeCliOptions = {
   multiWindow: false,
   startToTray: false,
   forceInternalNavigation: false,
+  internalUrlRegex: '',
   iterativeBuild: false,
   zoom: 100,
   minWidth: 0,

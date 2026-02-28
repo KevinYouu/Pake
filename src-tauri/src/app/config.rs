@@ -24,6 +24,8 @@ pub struct WindowConfig {
     pub start_to_tray: bool,
     #[serde(default)]
     pub force_internal_navigation: bool,
+    #[serde(default)]
+    pub internal_url_regex: String,
     #[serde(default = "default_zoom")]
     pub zoom: u32,
     #[serde(default)]

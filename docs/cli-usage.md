@@ -238,6 +238,20 @@ Keeps every clicked link (even pointing to other domains) inside the Pake window
 --force-internal-navigation
 ```
 
+#### [internal-url-regex]
+
+Set a regex pattern to determine which URLs should be considered internal (opened within the app). When set, this pattern takes precedence over the default domain-based matching. Useful when you want to limit internal navigation to specific paths on a domain.
+
+```shell
+--internal-url-regex <pattern>
+
+# Example: Only treat facebook.com/messages paths as internal
+--internal-url-regex "^https://www\\.facebook\\.com/messages(/.*)?$"
+
+# Example: Only treat specific subdomains as internal
+--internal-url-regex "^https://(app|api)\\.example\\.com"
+```
+
 #### [multi-arch]
 
 Package the application to support both Intel and M1 chips, exclusively for macOS. Default is `false`.
