@@ -19,6 +19,7 @@
       "maximize": false,
       "start_to_tray": false,
       "force_internal_navigation": false,
+      "internal_url_regex": "",
       "new_window": false
     }
   ],
@@ -35,5 +36,6 @@
   "system_tray_path": "icons/icon.png",
   "inject": [],
   "proxy_url": "",
-  "multi_instance": false
+  "multi_instance": false,
+  "multi_window": false
 }

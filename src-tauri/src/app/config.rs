@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WindowConfig {
     pub url: String,
     pub hide_title_bar: bool,
@@ -24,6 +24,8 @@ pub struct WindowConfig {
     pub start_to_tray: bool,
     #[serde(default)]
     pub force_internal_navigation: bool,
+    #[serde(default)]
+    pub internal_url_regex: String,
     #[serde(default = "default_zoom")]
     pub zoom: u32,
     #[serde(default)]
@@ -38,7 +40,7 @@ fn default_zoom() -> u32 {
     100
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PlatformSpecific<T> {
     pub macos: T,
     pub linux: T,
@@ -70,7 +72,7 @@ where
 pub type UserAgent = PlatformSpecific<String>;
 pub type FunctionON = PlatformSpecific<bool>;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PakeConfig {
     pub windows: Vec<WindowConfig>,
     pub user_agent: UserAgent,
@@ -79,6 +81,8 @@ pub struct PakeConfig {
     pub proxy_url: String,
     #[serde(default)]
     pub multi_instance: bool,
+    #[serde(default)]
+    pub multi_window: bool,
 }
 
 impl PakeConfig {

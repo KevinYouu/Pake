@@ -94,11 +94,17 @@ export interface PakeCliOptions {
   // Allow multiple instances, default false (single instance)
   multiInstance: boolean;
 
+  // Allow opening multiple windows in one app instance, default false
+  multiWindow: boolean;
+
   // Start app minimized to tray, default false
   startToTray: boolean;
 
   // Force navigation to stay inside the Pake window even for external links
   forceInternalNavigation: boolean;
+
+  // Regex pattern to match URLs that should be considered internal
+  internalUrlRegex: string;
 
   // Initial page zoom level (50-200), default 100
   zoom: number;
@@ -149,6 +155,7 @@ export interface WindowConfig {
   enable_drag_drop: boolean;
   start_to_tray: boolean;
   force_internal_navigation: boolean;
+  internal_url_regex: string;
   zoom: number;
   min_width: number;
   min_height: number;
@@ -163,4 +170,5 @@ export interface PakeConfig {
   system_tray_path: string;
   proxy_url: string;
   multi_instance: boolean;
+  multi_window: boolean;
 }

@@ -1,7 +1,7 @@
 use crate::app::config::PakeConfig;
 use crate::util::get_data_dir;
-use std::{path::PathBuf, str::FromStr};
-use tauri::{App, Config, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use std::{path::PathBuf, str::FromStr, sync::Mutex};
+use tauri::{AppHandle, Config, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 #[cfg(target_os = "macos")]
 use tauri::{Theme, TitleBarStyle};
@@ -22,9 +22,67 @@ fn build_proxy_browser_arg(url: &Url) -> Option<String> {
     }
 }
 
-pub fn set_window(app: &mut App, config: &PakeConfig, tauri_config: &Config) -> WebviewWindow {
+pub struct MultiWindowState {
+    pub pake_config: PakeConfig,
+    pub tauri_config: Config,
+    next_window_index: Mutex<u32>,
+}
+
+impl MultiWindowState {
+    pub fn new(pake_config: PakeConfig, tauri_config: Config) -> Self {
+        Self {
+            pake_config,
+            tauri_config,
+            next_window_index: Mutex::new(0),
+        }
+    }
+
+    fn next_window_label(&self) -> String {
+        let mut index = self.next_window_index.lock().unwrap();
+        *index += 1;
+        format!("pake-{}", *index)
+    }
+}
+
+pub fn set_window(app: &AppHandle, config: &PakeConfig, tauri_config: &Config) -> WebviewWindow {
+    build_window_with_label(app, config, tauri_config, "pake").expect("Failed to build window")
+}
+
+pub fn open_additional_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
+    let state = app.state::<MultiWindowState>();
+    let label = state.next_window_label();
+    build_window_with_label(app, &state.pake_config, &state.tauri_config, &label)
+}
+
+pub fn open_additional_window_safe(app: &AppHandle) {
+    #[cfg(target_os = "windows")]
+    {
+        let app_handle = app.clone();
+        std::thread::spawn(move || {
+            if let Ok(window) = open_additional_window(&app_handle) {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Ok(window) = open_additional_window(app) {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }
+}
+
+fn build_window_with_label(
+    app: &AppHandle,
+    config: &PakeConfig,
+    tauri_config: &Config,
+    label: &str,
+) -> tauri::Result<WebviewWindow> {
     let package_name = tauri_config.clone().product_name.unwrap();
-    let _data_dir = get_data_dir(app.handle(), package_name);
+    let _data_dir = get_data_dir(app, package_name);
 
     let window_config = config
         .windows
@@ -53,7 +111,7 @@ pub fn set_window(app: &mut App, config: &PakeConfig, tauri_config: &Config) -> 
         }
     });
 
-    let mut window_builder = WebviewWindowBuilder::new(app, "pake", url)
+    let mut window_builder = WebviewWindowBuilder::new(app, label, url)
         .title(effective_title)
         .visible(false)
         .user_agent(user_agent)
@@ -269,5 +327,5 @@ pub fn set_window(app: &mut App, config: &PakeConfig, tauri_config: &Config) -> 
         true
     });
 
-    window_builder.build().expect("Failed to build window")
+    window_builder.build()
 }
