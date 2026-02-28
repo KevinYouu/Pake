@@ -77,7 +77,11 @@ async function copyWindowsIconIfNeeded(
     const finalIconPath = generateIconPath(appName);
     await fsExtra.ensureDir(path.dirname(finalIconPath));
     // Reorder ICO to prioritize 256px icons for better Windows display
-    const reordered = await writeIcoWithPreferredSize(convertedPath, finalIconPath, 256);
+    const reordered = await writeIcoWithPreferredSize(
+      convertedPath,
+      finalIconPath,
+      256,
+    );
     if (!reordered) {
       await fsExtra.copy(convertedPath, finalIconPath);
     }
