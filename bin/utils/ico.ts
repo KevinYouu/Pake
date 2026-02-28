@@ -101,7 +101,10 @@ export function buildReorderedIcoBuffer(
   const ordered = [...entries].sort(compareByPreferredSize(preferredSize));
   const count = ordered.length;
   const tableSize = ICO_HEADER_SIZE + count * ICO_DIR_ENTRY_SIZE;
-  const payloadSize = ordered.reduce((acc, entry) => acc + entry.data.length, 0);
+  const payloadSize = ordered.reduce(
+    (acc, entry) => acc + entry.data.length,
+    0,
+  );
   const output = Buffer.alloc(tableSize + payloadSize);
 
   output.writeUInt16LE(0, 0);
