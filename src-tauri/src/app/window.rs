@@ -33,7 +33,7 @@ impl MultiWindowState {
         Self {
             pake_config,
             tauri_config,
-            next_window_index: Mutex::new(1),
+            next_window_index: Mutex::new(0),
         }
     }
 
