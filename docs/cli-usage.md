@@ -238,6 +238,20 @@ Keeps every clicked link (even pointing to other domains) inside the Pake window
 --force-internal-navigation
 ```
 
+#### [internal-url-regex]
+
+Set a regex pattern to determine which URLs should be considered internal (opened within the app). When set, this pattern takes precedence over the default domain-based matching. Useful when you want to limit internal navigation to specific paths on a domain.
+
+```shell
+--internal-url-regex <pattern>
+
+# Example: Only treat facebook.com/messages paths as internal
+--internal-url-regex "^https://www\\.facebook\\.com/messages(/.*)?$"
+
+# Example: Only treat specific subdomains as internal
+--internal-url-regex "^https://(app|api)\\.example\\.com"
+```
+
 #### [multi-arch]
 
 Package the application to support both Intel and M1 chips, exclusively for macOS. Default is `false`.
@@ -418,6 +432,24 @@ Allow the packaged app to run more than one instance at the same time. Default i
 
 # Example: Allow multiple chat windows
 pake https://chat.example.com --name ChatApp --multi-instance
+```
+
+#### [multi-window]
+
+Allow opening multiple windows within a single running app instance. Default is `false`.
+
+This is different from `--multi-instance`:
+
+- `--multi-instance`: starts multiple app processes.
+- `--multi-window`: keeps one process and opens extra windows from that process.
+
+When enabled, relaunching an already running app opens a new window instead of only focusing the existing one.
+
+```shell
+--multi-window
+
+# Example: Keep one process but open multiple windows
+pake https://chat.example.com --name ChatApp --multi-window
 ```
 
 #### [installer-language]
