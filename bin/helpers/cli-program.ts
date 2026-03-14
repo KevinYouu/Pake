@@ -22,6 +22,12 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
     .showHelpAfterError()
     .argument('[url]', 'The web URL you want to package', validateUrlInput)
     .option('--name <string>', 'Application name')
+    .addOption(
+      new Option(
+        '--identifier <string>',
+        'Application identifier / bundle ID',
+      ).hideHelp(),
+    )
     .option('--icon <string>', 'Application icon', DEFAULT.icon)
     .option(
       '--width <number>',
@@ -164,6 +170,14 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .hideHelp(),
     )
     .addOption(
+      new Option(
+        '--multi-window',
+        'Allow opening multiple windows within one app instance',
+      )
+        .default(DEFAULT.multiWindow)
+        .hideHelp(),
+    )
+    .addOption(
       new Option('--start-to-tray', 'Start app minimized to tray')
         .default(DEFAULT.startToTray)
         .hideHelp(),
@@ -174,6 +188,14 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         'Keep every link inside the Pake window instead of opening external handlers',
       )
         .default(DEFAULT.forceInternalNavigation)
+        .hideHelp(),
+    )
+    .addOption(
+      new Option(
+        '--internal-url-regex <string>',
+        'Regex pattern to match URLs that should be considered internal',
+      )
+        .default(DEFAULT.internalUrlRegex)
         .hideHelp(),
     )
     .addOption(
@@ -222,8 +244,26 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .hideHelp(),
     )
     .addOption(
-      new Option('--new-window', 'Allow new window for third-party login')
+      new Option(
+        '--new-window',
+        'Allow sites to open new windows (for auth flows, tabs, branches)',
+      )
         .default(DEFAULT.newWindow)
+        .hideHelp(),
+    )
+    .option(
+      '--install',
+      'Auto-install app to /Applications (macOS) after build and remove local bundle',
+      DEFAULT.install,
+    )
+    .addOption(
+      new Option('--camera', 'Request camera permission on macOS')
+        .default(DEFAULT.camera)
+        .hideHelp(),
+    )
+    .addOption(
+      new Option('--microphone', 'Request microphone permission on macOS')
+        .default(DEFAULT.microphone)
         .hideHelp(),
     )
     .version(packageJson.version, '-v, --version')

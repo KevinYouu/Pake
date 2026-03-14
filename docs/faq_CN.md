@@ -352,7 +352,38 @@ Pake 可以自动转换图标，但提供正确的格式更可靠。
    pake https://example.com --inject ./fix.js
    ```
 
+   对于需要定时刷新的页面，建议把这类行为放在一个小的注入脚本里，而不是增加专门的 Pake 参数：
+
+   ```javascript
+   function isEditing(element) {
+     if (!element) return false;
+     const tagName = element.tagName;
+     return (
+       element.isContentEditable ||
+       tagName === "INPUT" ||
+       tagName === "TEXTAREA" ||
+       tagName === "SELECT"
+     );
+   }
+
+   setInterval(() => {
+     if (!document.hidden && !isEditing(document.activeElement)) {
+       window.location.reload();
+     }
+   }, 300000);
+   ```
+
+   将其保存为 `refresh.js`，然后这样打包：
+
+   ```bash
+   pake https://news.ycombinator.com --name HackerNews --inject ./refresh.js
+   ```
+
 3. **检查网站是否需要 WebView 中可能不可用的特定权限**
+
+4. **注意嵌入式 WebView 的登录限制**
+
+   某些认证提供方，尤其是 Google，可能会阻止在嵌入式 WebView 中完成登录。由于 Pake 是把网站包装进桌面 WebView，Google 自家站点或依赖 Google OAuth 的网站，即使启用了 `--new-window` 或 `--multi-window`，也仍然可能无法在应用内完成登录。这属于提供方策略限制，不是打包逻辑错误。遇到这种情况时，建议改用普通浏览器、浏览器安装版站点应用，或官方原生桌面客户端。
 
 ---
 

@@ -4,7 +4,11 @@ import logger from '@/options/logger';
 
 import { handleIcon } from './icon';
 import { getDomain } from '@/utils/url';
-import { getIdentifier, promptText, capitalizeFirstLetter } from '@/utils/info';
+import {
+  promptText,
+  capitalizeFirstLetter,
+  resolveIdentifier,
+} from '@/utils/info';
 import { generateLinuxPackageName } from '@/utils/name';
 import { PakeAppOptions, PakeCliOptions, PlatformMap } from '@/types';
 
@@ -74,10 +78,12 @@ export default async function handleOptions(
     }
   }
 
+  const resolvedName = name || 'pake-app';
+
   const appOptions: PakeAppOptions = {
     ...options,
-    name,
-    identifier: getIdentifier(url),
+    name: resolvedName,
+    identifier: resolveIdentifier(url, options.name, options.identifier),
   };
 
   const iconPath = await handleIcon(appOptions, url);

@@ -11,6 +11,7 @@ import { getSpinner } from '@/utils/info';
 import { npmDirectory } from '@/utils/dir';
 import { IS_LINUX, IS_WIN, IS_MAC } from '@/utils/platform';
 import { PakeAppOptions } from '@/types';
+import { writeIcoWithPreferredSize } from '@/utils/ico';
 
 type PlatformIconConfig = {
   format: string;
@@ -75,7 +76,15 @@ async function copyWindowsIconIfNeeded(
   try {
     const finalIconPath = generateIconPath(appName);
     await fsExtra.ensureDir(path.dirname(finalIconPath));
-    await fsExtra.copy(convertedPath, finalIconPath);
+    // Reorder ICO to prioritize 256px icons for better Windows display
+    const reordered = await writeIcoWithPreferredSize(
+      convertedPath,
+      finalIconPath,
+      256,
+    );
+    if (!reordered) {
+      await fsExtra.copy(convertedPath, finalIconPath);
+    }
     return finalIconPath;
   } catch (error) {
     logger.warn(

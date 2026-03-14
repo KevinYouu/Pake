@@ -60,7 +60,7 @@ pake [url] [options]
 
 应用程序的打包结果将默认保存在当前工作目录。由于首次打包需要配置环境，这可能需要一些时间，请耐心等待。
 
-> **macOS 输出**：在 macOS 上，Pake 默认创建 DMG 安装程序。如需创建 `.app` 包进行测试（避免用户交互），请设置环境变量 `PAKE_CREATE_APP=1`。
+> **macOS 输出**：在 macOS 上，Pake 默认创建 DMG 安装程序。如需创建 `.app` 包进行测试（避免用户交互），请设置环境变量 `PAKE_CREATE_APP=1`。如果希望 Pake 直接将应用安装到 `/Applications`，可以使用 `--install`；该选项会构建 `.app`、复制到 `/Applications`，并在安装成功后删除当前目录中的本地 `.app`。
 >
 > **注意**：打包过程需要使用 `Rust` 环境。如果您没有安装 `Rust`，系统会提示您是否要安装。如果遇到安装失败或超时的问题，您可以 [手动安装](https://www.rust-lang.org/tools/install)。
 
@@ -236,6 +236,20 @@ pake https://github.com --name GitHub
 --force-internal-navigation
 ```
 
+#### [internal-url-regex]
+
+设置一个正则表达式来判断哪些 URL 应被视为内部链接（在应用内打开）。设置后，此正则表达式将优先于默认的域名匹配逻辑。适用于只想让特定路径在应用内打开的场景。
+
+```shell
+--internal-url-regex <pattern>
+
+# 示例：只把 facebook.com/messages 路径视为内部链接
+--internal-url-regex "^https://www\\.facebook\\.com/messages(/.*)?$"
+
+# 示例：只把特定子域名视为内部链接
+--internal-url-regex "^https://(app|api)\\.example\\.com"
+```
+
 #### [multi-arch]
 
 设置打包结果同时支持 Intel 和 M1 芯片，仅适用于 macOS，默认为 `false`。
@@ -407,6 +421,19 @@ pake https://github.com --name GitHub --keep-binary
 --iterative-build
 ```
 
+#### [install]
+
+将构建出的 macOS 应用直接安装到 `/Applications`。默认为 `false`。
+
+该选项仅适用于 macOS，适合本地开发和快速验证。启用后，Pake 会构建 `.app` 包，将其复制到 `/Applications`，如果已存在同名应用则先替换，并在安装成功后删除当前工作目录中的本地 `.app`。如果安装失败，当前目录中的 `.app` 会被保留。
+
+```shell
+--install
+
+# 示例：构建后直接安装到 /Applications
+pake https://github.com --name GitHub --install
+```
+
 #### [multi-instance]
 
 允许打包后的应用同时运行多个实例。默认为 `false`，此时再次启动只会聚焦已有窗口。启用该选项后，可以同时打开同一个应用的多个窗口。
@@ -418,9 +445,29 @@ pake https://github.com --name GitHub --keep-binary
 pake https://chat.example.com --name ChatApp --multi-instance
 ```
 
+#### [multi-window]
+
+允许在单个运行中的应用实例内打开多个窗口，默认值为 `false`。
+
+它和 `--multi-instance` 的区别：
+
+- `--multi-instance`：启动多个应用进程。
+- `--multi-window`：保持单进程，在该进程内打开多个窗口。
+
+启用后，如果应用已在运行，再次启动会新开一个窗口，而不是仅聚焦已有窗口。
+
+这个选项可以改善基于弹窗的认证流程，但不能绕过认证提供方的策略限制。某些提供方，尤其是 Google，仍然可能拒绝在嵌入式 WebView 中完成登录。
+
+```shell
+--multi-window
+
+# 示例：单进程多窗口
+pake https://chat.example.com --name ChatApp --multi-window
+```
+
 #### [installer-language]
 
-设置 Windows 安装包语言。支持 `zh-CN`、`ja-JP`，更多在 [Tauri 文档](https://tauri.app/distribute/windows-installer/#internationalization)。默认为 `en-US`。
+设置 Windows 安装包语言。支持 `zh-CN`、`ja-JP`，更多在 [Tauri 文档](https://v2.tauri.app/distribute/windows-installer/#internationalization)。默认为 `en-US`。
 
 ```shell
 --installer-language <language>
@@ -481,7 +528,9 @@ pake ./my-app/index.html --name "my-app" --use-local-file
 
 #### [new-window]
 
-允许弹出新窗口，适用于第三方登录授权。
+允许网站打开新窗口，例如登录授权弹窗、额外标签页或分支会话页面。
+
+这个选项可以帮助依赖弹窗授权窗口的网站，但不能保证一定能在应用内完成登录。某些提供方，尤其是 Google，可能仍然会阻止在嵌入式 WebView 中进行认证。
 
 ```shell
 --new-window

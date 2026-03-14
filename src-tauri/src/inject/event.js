@@ -262,6 +262,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const invoke = tauri.core.invoke;
   const pakeConfig = window["pakeConfig"] || {};
   const forceInternalNavigation = pakeConfig.force_internal_navigation === true;
+  const internalUrlRegex = pakeConfig.internal_url_regex || "";
+  let internalUrlPattern = null;
+  if (internalUrlRegex) {
+    try {
+      internalUrlPattern = new RegExp(internalUrlRegex);
+    } catch (e) {
+      console.error("[Pake] Invalid internal_url_regex pattern:", e);
+    }
+  }
 
   if (!document.getElementById("pake-top-dom")) {
     const topDom = document.createElement("div");
@@ -465,6 +474,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // Check if URL should be treated as internal based on regex pattern or domain
+  const isInternalUrl = (url) => {
+    // If regex pattern is configured, use it as the primary check
+    if (internalUrlPattern) {
+      try {
+        return internalUrlPattern.test(url);
+      } catch (e) {
+        console.error("[Pake] Error testing internal_url_regex:", e);
+        // Fall back to domain check on error
+        return isSameDomain(url);
+      }
+    }
+    // Default to domain-based check
+    return isSameDomain(url);
+  };
+
   const detectAnchorElementClick = (e) => {
     // Safety check: ensure e.target exists and is an Element with closest method
     if (!e.target || typeof e.target.closest !== "function") {
@@ -478,9 +503,26 @@ document.addEventListener("DOMContentLoaded", () => {
       const absoluteUrl = hrefUrl.href;
       let filename = anchorElement.download || getFilenameFromUrl(absoluteUrl);
 
-      // Early check: Allow OAuth/authentication links to navigate naturally
+      // Keep OAuth/authentication flows inside the app when popup support is enabled.
       if (window.isAuthLink(absoluteUrl)) {
-        console.log("[Pake] Allowing OAuth navigation to:", absoluteUrl);
+        console.log("[Pake] Handling OAuth navigation in-app:", absoluteUrl);
+
+        if (window.pakeConfig?.new_window) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+
+          const authWindow = originalWindowOpen.call(
+            window,
+            absoluteUrl,
+            "_blank",
+            "width=1200,height=800,scrollbars=yes,resizable=yes",
+          );
+
+          if (!authWindow) {
+            window.location.href = absoluteUrl;
+          }
+        }
+
         return;
       }
 
@@ -493,8 +535,8 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        if (isSameDomain(absoluteUrl)) {
-          // For same-domain links, let the browser handle it naturally
+        if (isInternalUrl(absoluteUrl)) {
+          // For internal links (based on regex or domain), let the browser handle it naturally
           return;
         }
 
@@ -537,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Handle regular links: same domain allows normal navigation, cross-domain opens new window
+      // Handle regular links: internal URLs allow normal navigation, external opens new window
       if (!target || target === "_self") {
         // Optimization: Allow previewable media to be handled by the app/browser directly
         // This fixes issues where CDN links are treated as external
@@ -545,7 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        if (!isSameDomain(absoluteUrl)) {
+        if (!isInternalUrl(absoluteUrl)) {
           if (forceInternalNavigation) {
             return;
           }
@@ -583,7 +625,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const hrefUrl = new URL(url, baseUrl);
       const absoluteUrl = hrefUrl.href;
 
-      if (!isSameDomain(absoluteUrl)) {
+      if (!isInternalUrl(absoluteUrl)) {
         if (forceInternalNavigation) {
           return originalWindowOpen.call(window, absoluteUrl, name, specs);
         }

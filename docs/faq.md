@@ -352,7 +352,38 @@ This is usually due to web compatibility issues. Try:
    pake https://example.com --inject ./fix.js
    ```
 
+   For pages that need periodic reloads, you can keep this behavior in a small injected script instead of adding a dedicated Pake option:
+
+   ```javascript
+   function isEditing(element) {
+     if (!element) return false;
+     const tagName = element.tagName;
+     return (
+       element.isContentEditable ||
+       tagName === "INPUT" ||
+       tagName === "TEXTAREA" ||
+       tagName === "SELECT"
+     );
+   }
+
+   setInterval(() => {
+     if (!document.hidden && !isEditing(document.activeElement)) {
+       window.location.reload();
+     }
+   }, 300000);
+   ```
+
+   Save it as `refresh.js` and package with:
+
+   ```bash
+   pake https://news.ycombinator.com --name HackerNews --inject ./refresh.js
+   ```
+
 3. **Check if the site requires specific permissions** that may not be available in WebView
+
+4. **Be aware of embedded-webview sign-in limits**
+
+   Some authentication providers, especially Google, may block sign-in inside embedded webviews. Because Pake packages sites into a desktop webview, Google properties or sites that rely on Google OAuth may still fail to sign in even when `--new-window` or `--multi-window` is enabled. This is provider policy, not a packaging bug. In those cases, use the normal browser, a browser-installed app, or a native desktop client.
 
 ---
 
