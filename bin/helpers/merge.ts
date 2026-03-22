@@ -70,13 +70,17 @@ export async function mergeConfig(
     wasm,
     enableDragDrop,
     multiInstance,
+    multiWindow,
     startToTray,
     forceInternalNavigation,
+    internalUrlRegex,
     zoom,
     minWidth,
     minHeight,
     ignoreCertificateErrors,
     newWindow,
+    camera,
+    microphone,
   } = options;
 
   const { platform } = process;
@@ -101,6 +105,7 @@ export async function mergeConfig(
     enable_drag_drop: enableDragDrop,
     start_to_tray: startToTray && showSystemTray,
     force_internal_navigation: forceInternalNavigation,
+    internal_url_regex: internalUrlRegex,
     zoom,
     min_width: minWidth,
     min_height: minHeight,
@@ -370,6 +375,7 @@ Terminal=false
   }
   tauriConf.pake.proxy_url = proxyUrl || '';
   tauriConf.pake.multi_instance = multiInstance;
+  tauriConf.pake.multi_window = multiWindow;
 
   // Configure WASM support with required HTTP headers
   if (wasm) {
@@ -379,6 +385,35 @@ Terminal=false
         'Cross-Origin-Embedder-Policy': 'require-corp',
       },
     };
+  }
+
+  // Write entitlements dynamically on macOS so camera/microphone are opt-in
+  if (platform === 'darwin') {
+    const entitlementEntries: string[] = [];
+    if (camera) {
+      entitlementEntries.push(
+        '    <key>com.apple.security.device.camera</key>\n    <true/>',
+      );
+    }
+    if (microphone) {
+      entitlementEntries.push(
+        '    <key>com.apple.security.device.audio-input</key>\n    <true/>',
+      );
+    }
+    const entitlementsContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+${entitlementEntries.join('\n')}
+  </dict>
+</plist>
+`;
+    const entitlementsPath = path.join(
+      npmDirectory,
+      'src-tauri',
+      'entitlements.plist',
+    );
+    await fsExtra.writeFile(entitlementsPath, entitlementsContent);
   }
 
   // Save config file.

@@ -300,6 +300,33 @@ export default abstract class BaseBuilder {
       const binaryPath = this.getRawBinaryPath(name);
       logger.success('✔ Raw binary located in', path.resolve(binaryPath));
     }
+
+    if (IS_MAC && fileType === 'app' && this.options.install) {
+      await this.installAppToApplications(distPath, name);
+    }
+  }
+
+  private async installAppToApplications(
+    appBundlePath: string,
+    appName: string,
+  ): Promise<void> {
+    try {
+      logger.info(`- Installing ${appName} to /Applications...`);
+
+      const appBundleName = path.basename(appBundlePath);
+      const appDest = path.join('/Applications', appBundleName);
+
+      // fsExtra.move uses fs.rename (atomic on same filesystem) and falls back
+      // to copy+remove only when moving across volumes.
+      await fsExtra.move(appBundlePath, appDest, { overwrite: true });
+
+      logger.success(
+        `✔ ${appBundleName.replace(/\.app$/, '')} installed to /Applications`,
+      );
+    } catch (error) {
+      logger.error(`✕ Failed to install ${appName}: ${error}`);
+      logger.info(`  App bundle still available at: ${appBundlePath}`);
+    }
   }
 
   protected getFileType(target: string): string {

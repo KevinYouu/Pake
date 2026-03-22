@@ -22,7 +22,7 @@ import * as psl from 'psl';
 import { InvalidArgumentError, program as program$1, Option } from 'commander';
 
 var name = "pake-cli";
-var version = "3.9.1";
+var version = "3.10.1";
 var description = "🤱🏻 Turn any webpage into a desktop app with one command. 🤱🏻 一键打包网页生成轻量桌面应用。";
 var engines = {
 	node: ">=18.0.0"
@@ -94,7 +94,7 @@ var devDependencies = {
 	"@rollup/plugin-replace": "^6.0.3",
 	"@rollup/plugin-terser": "^0.4.4",
 	"@types/fs-extra": "^11.0.4",
-	"@types/node": "^25.3.0",
+	"@types/node": "^25.3.2",
 	"@types/page-icon": "^0.3.6",
 	"@types/prompts": "^2.4.9",
 	"@types/tmp": "^0.2.6",
@@ -102,7 +102,7 @@ var devDependencies = {
 	"app-root-path": "^3.1.0",
 	"cross-env": "^10.1.0",
 	prettier: "^3.8.1",
-	rollup: "^4.58.0",
+	rollup: "^4.59.0",
 	"rollup-plugin-typescript2": "^0.36.0",
 	tslib: "^2.8.1",
 	typescript: "^5.9.3",
@@ -171,14 +171,25 @@ let tauriConfig = {
     pake: pakeConf,
 };
 
-// Generates an identifier based on the given URL.
-function getIdentifier(url) {
+// Generates a stable identifier based on the app URL (and optionally name).
+// When name is provided it is included in the hash so two apps wrapping
+// the same URL can coexist. Omitting name preserves backward compatibility
+// with identifiers generated before V3.10.1.
+function getIdentifier(url, name) {
+    const hashInput = name ? `${url}::${name}` : url;
     const postFixHash = crypto
         .createHash('md5')
-        .update(url)
+        .update(hashInput)
         .digest('hex')
         .substring(0, 6);
     return `com.pake.${postFixHash}`;
+}
+function resolveIdentifier(url, explicitName, customIdentifier) {
+    const trimmedIdentifier = customIdentifier?.trim();
+    if (trimmedIdentifier) {
+        return trimmedIdentifier;
+    }
+    return getIdentifier(url, explicitName);
 }
 async function promptText(message, initial) {
     const response = await prompts({
@@ -484,7 +495,7 @@ async function mergeConfig(url, options, tauriConf) {
             await fsExtra.copy(sourcePath, destPath);
         }
     }));
-    const { width, height, fullscreen, maximize, hideTitleBar, alwaysOnTop, appVersion, darkMode, disabledWebShortcuts, activationShortcut, userAgent, showSystemTray, systemTrayIcon, useLocalFile, identifier, name = 'pake-app', resizable = true, inject, proxyUrl, installerLanguage, hideOnClose, incognito, title, wasm, enableDragDrop, multiInstance, startToTray, forceInternalNavigation, zoom, minWidth, minHeight, ignoreCertificateErrors, newWindow, } = options;
+    const { width, height, fullscreen, maximize, hideTitleBar, alwaysOnTop, appVersion, darkMode, disabledWebShortcuts, activationShortcut, userAgent, showSystemTray, systemTrayIcon, useLocalFile, identifier, name = 'pake-app', resizable = true, inject, proxyUrl, installerLanguage, hideOnClose, incognito, title, wasm, enableDragDrop, multiInstance, multiWindow, startToTray, forceInternalNavigation, internalUrlRegex, zoom, minWidth, minHeight, ignoreCertificateErrors, newWindow, camera, microphone, } = options;
     const { platform } = process;
     const platformHideOnClose = hideOnClose ?? platform === 'darwin';
     const tauriConfWindowOptions = {
@@ -505,6 +516,7 @@ async function mergeConfig(url, options, tauriConf) {
         enable_drag_drop: enableDragDrop,
         start_to_tray: startToTray && showSystemTray,
         force_internal_navigation: forceInternalNavigation,
+        internal_url_regex: internalUrlRegex,
         zoom,
         min_width: minWidth,
         min_height: minHeight,
@@ -728,6 +740,7 @@ Terminal=false
     }
     tauriConf.pake.proxy_url = proxyUrl || '';
     tauriConf.pake.multi_instance = multiInstance;
+    tauriConf.pake.multi_window = multiWindow;
     // Configure WASM support with required HTTP headers
     if (wasm) {
         tauriConf.app.security = {
@@ -736,6 +749,26 @@ Terminal=false
                 'Cross-Origin-Embedder-Policy': 'require-corp',
             },
         };
+    }
+    // Write entitlements dynamically on macOS so camera/microphone are opt-in
+    if (platform === 'darwin') {
+        const entitlementEntries = [];
+        if (camera) {
+            entitlementEntries.push('    <key>com.apple.security.device.camera</key>\n    <true/>');
+        }
+        if (microphone) {
+            entitlementEntries.push('    <key>com.apple.security.device.audio-input</key>\n    <true/>');
+        }
+        const entitlementsContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+${entitlementEntries.join('\n')}
+  </dict>
+</plist>
+`;
+        const entitlementsPath = path.join(npmDirectory, 'src-tauri', 'entitlements.plist');
+        await fsExtra.writeFile(entitlementsPath, entitlementsContent);
     }
     // Save config file.
     const platformConfigPaths = {
@@ -960,6 +993,24 @@ class BaseBuilder {
             const binaryPath = this.getRawBinaryPath(name);
             logger.success('✔ Raw binary located in', path.resolve(binaryPath));
         }
+        if (IS_MAC && fileType === 'app' && this.options.install) {
+            await this.installAppToApplications(distPath, name);
+        }
+    }
+    async installAppToApplications(appBundlePath, appName) {
+        try {
+            logger.info(`- Installing ${appName} to /Applications...`);
+            const appBundleName = path.basename(appBundlePath);
+            const appDest = path.join('/Applications', appBundleName);
+            // fsExtra.move uses fs.rename (atomic on same filesystem) and falls back
+            // to copy+remove only when moving across volumes.
+            await fsExtra.move(appBundlePath, appDest, { overwrite: true });
+            logger.success(`✔ ${appBundleName.replace(/\.app$/, '')} installed to /Applications`);
+        }
+        catch (error) {
+            logger.error(`✕ Failed to install ${appName}: ${error}`);
+            logger.info(`  App bundle still available at: ${appBundlePath}`);
+        }
     }
     getFileType(target) {
         return target;
@@ -1160,7 +1211,9 @@ class MacBuilder extends BaseBuilder {
         this.buildArch = validArchs.includes(options.targets || '')
             ? options.targets
             : 'auto';
-        if (options.iterativeBuild || process.env.PAKE_CREATE_APP === '1') {
+        if (options.iterativeBuild ||
+            options.install ||
+            process.env.PAKE_CREATE_APP === '1') {
             this.buildFormat = 'app';
         }
         else {
@@ -1397,6 +1450,108 @@ class BuilderProvider {
     }
 }
 
+const ICO_HEADER_SIZE = 6;
+const ICO_DIR_ENTRY_SIZE = 16;
+const ICO_TYPE_ICON = 1;
+function decodeDimension(value) {
+    return value === 0 ? 256 : value;
+}
+function compareByPreferredSize(preferredSize) {
+    return (a, b) => {
+        const aSize = Math.max(a.width, a.height);
+        const bSize = Math.max(b.width, b.height);
+        const aExact = aSize === preferredSize ? 0 : 1;
+        const bExact = bSize === preferredSize ? 0 : 1;
+        if (aExact !== bExact)
+            return aExact - bExact;
+        const aDistance = Math.abs(aSize - preferredSize);
+        const bDistance = Math.abs(bSize - preferredSize);
+        if (aDistance !== bDistance)
+            return aDistance - bDistance;
+        const aSmaller = aSize < preferredSize ? 1 : 0;
+        const bSmaller = bSize < preferredSize ? 1 : 0;
+        if (aSmaller !== bSmaller)
+            return aSmaller - bSmaller;
+        if (a.bitCount !== b.bitCount)
+            return b.bitCount - a.bitCount;
+        if (aSize !== bSize)
+            return bSize - aSize;
+        return a.index - b.index;
+    };
+}
+function parseIcoBuffer(buffer) {
+    if (buffer.length < ICO_HEADER_SIZE) {
+        throw new Error('Invalid ICO: header too short.');
+    }
+    const reserved = buffer.readUInt16LE(0);
+    const type = buffer.readUInt16LE(2);
+    const count = buffer.readUInt16LE(4);
+    if (reserved !== 0 || type !== ICO_TYPE_ICON || count < 1) {
+        throw new Error('Invalid ICO: invalid header.');
+    }
+    const tableSize = ICO_HEADER_SIZE + count * ICO_DIR_ENTRY_SIZE;
+    if (buffer.length < tableSize) {
+        throw new Error('Invalid ICO: directory table too short.');
+    }
+    const entries = [];
+    for (let i = 0; i < count; i++) {
+        const offset = ICO_HEADER_SIZE + i * ICO_DIR_ENTRY_SIZE;
+        const widthByte = buffer.readUInt8(offset);
+        const heightByte = buffer.readUInt8(offset + 1);
+        const bitCount = buffer.readUInt16LE(offset + 6);
+        const bytesInRes = buffer.readUInt32LE(offset + 8);
+        const imageOffset = buffer.readUInt32LE(offset + 12);
+        if (bytesInRes < 1 || imageOffset + bytesInRes > buffer.length) {
+            throw new Error('Invalid ICO: frame out of bounds.');
+        }
+        entries.push({
+            index: i,
+            width: decodeDimension(widthByte),
+            height: decodeDimension(heightByte),
+            bitCount,
+            bytesInRes,
+            imageOffset,
+            directory: buffer.subarray(offset, offset + ICO_DIR_ENTRY_SIZE),
+            data: buffer.subarray(imageOffset, imageOffset + bytesInRes),
+        });
+    }
+    return entries;
+}
+function buildReorderedIcoBuffer(buffer, preferredSize) {
+    const entries = parseIcoBuffer(buffer);
+    const ordered = [...entries].sort(compareByPreferredSize(preferredSize));
+    const count = ordered.length;
+    const tableSize = ICO_HEADER_SIZE + count * ICO_DIR_ENTRY_SIZE;
+    const payloadSize = ordered.reduce((acc, entry) => acc + entry.data.length, 0);
+    const output = Buffer.alloc(tableSize + payloadSize);
+    output.writeUInt16LE(0, 0);
+    output.writeUInt16LE(ICO_TYPE_ICON, 2);
+    output.writeUInt16LE(count, 4);
+    let currentOffset = tableSize;
+    for (let i = 0; i < count; i++) {
+        const entry = ordered[i];
+        const entryOffset = ICO_HEADER_SIZE + i * ICO_DIR_ENTRY_SIZE;
+        entry.directory.copy(output, entryOffset, 0, 8);
+        output.writeUInt32LE(entry.data.length, entryOffset + 8);
+        output.writeUInt32LE(currentOffset, entryOffset + 12);
+        entry.data.copy(output, currentOffset);
+        currentOffset += entry.data.length;
+    }
+    return output;
+}
+async function writeIcoWithPreferredSize(sourcePath, outputPath, preferredSize) {
+    try {
+        const sourceBuffer = await fsExtra.readFile(sourcePath);
+        const reordered = buildReorderedIcoBuffer(sourceBuffer, preferredSize);
+        await fsExtra.ensureDir(path.dirname(outputPath));
+        await fsExtra.outputFile(outputPath, reordered);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+
 const ICON_CONFIG = {
     minFileSize: 100,
     supportedFormats: ['png', 'ico', 'jpeg', 'jpg', 'webp', 'icns'],
@@ -1440,7 +1595,11 @@ async function copyWindowsIconIfNeeded(convertedPath, appName) {
     try {
         const finalIconPath = generateIconPath(appName);
         await fsExtra.ensureDir(path.dirname(finalIconPath));
-        await fsExtra.copy(convertedPath, finalIconPath);
+        // Reorder ICO to prioritize 256px icons for better Windows display
+        const reordered = await writeIcoWithPreferredSize(convertedPath, finalIconPath, 256);
+        if (!reordered) {
+            await fsExtra.copy(convertedPath, finalIconPath);
+        }
         return finalIconPath;
     }
     catch (error) {
@@ -1884,10 +2043,11 @@ async function handleOptions(options, url) {
             process.exit(1);
         }
     }
+    const resolvedName = name || 'pake-app';
     const appOptions = {
         ...options,
-        name,
-        identifier: getIdentifier(url),
+        name: resolvedName,
+        identifier: resolveIdentifier(url, options.name, options.identifier),
     };
     const iconPath = await handleIcon(appOptions, url);
     appOptions.icon = iconPath || '';
@@ -1933,14 +2093,19 @@ const DEFAULT_PAKE_OPTIONS = {
     enableDragDrop: false,
     keepBinary: false,
     multiInstance: false,
+    multiWindow: false,
     startToTray: false,
     forceInternalNavigation: false,
+    internalUrlRegex: '',
     iterativeBuild: false,
     zoom: 100,
     minWidth: 0,
     minHeight: 0,
     ignoreCertificateErrors: false,
     newWindow: false,
+    install: false,
+    camera: false,
+    microphone: false,
 };
 
 function validateNumberInput(value) {
@@ -1980,6 +2145,7 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .showHelpAfterError()
         .argument('[url]', 'The web URL you want to package', validateUrlInput)
         .option('--name <string>', 'Application name')
+        .addOption(new Option('--identifier <string>', 'Application identifier / bundle ID').hideHelp())
         .option('--icon <string>', 'Application icon', DEFAULT_PAKE_OPTIONS.icon)
         .option('--width <number>', 'Window width', validateNumberInput, DEFAULT_PAKE_OPTIONS.width)
         .option('--height <number>', 'Window height', validateNumberInput, DEFAULT_PAKE_OPTIONS.height)
@@ -2058,11 +2224,17 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .addOption(new Option('--multi-instance', 'Allow multiple app instances')
         .default(DEFAULT_PAKE_OPTIONS.multiInstance)
         .hideHelp())
+        .addOption(new Option('--multi-window', 'Allow opening multiple windows within one app instance')
+        .default(DEFAULT_PAKE_OPTIONS.multiWindow)
+        .hideHelp())
         .addOption(new Option('--start-to-tray', 'Start app minimized to tray')
         .default(DEFAULT_PAKE_OPTIONS.startToTray)
         .hideHelp())
         .addOption(new Option('--force-internal-navigation', 'Keep every link inside the Pake window instead of opening external handlers')
         .default(DEFAULT_PAKE_OPTIONS.forceInternalNavigation)
+        .hideHelp())
+        .addOption(new Option('--internal-url-regex <string>', 'Regex pattern to match URLs that should be considered internal')
+        .default(DEFAULT_PAKE_OPTIONS.internalUrlRegex)
         .hideHelp())
         .addOption(new Option('--installer-language <string>', 'Installer language')
         .default(DEFAULT_PAKE_OPTIONS.installerLanguage)
@@ -2091,8 +2263,15 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .addOption(new Option('--iterative-build', 'Turn on rapid build mode (app only, no dmg/deb/msi), good for debugging')
         .default(DEFAULT_PAKE_OPTIONS.iterativeBuild)
         .hideHelp())
-        .addOption(new Option('--new-window', 'Allow new window for third-party login')
+        .addOption(new Option('--new-window', 'Allow sites to open new windows (for auth flows, tabs, branches)')
         .default(DEFAULT_PAKE_OPTIONS.newWindow)
+        .hideHelp())
+        .option('--install', 'Auto-install app to /Applications (macOS) after build and remove local bundle', DEFAULT_PAKE_OPTIONS.install)
+        .addOption(new Option('--camera', 'Request camera permission on macOS')
+        .default(DEFAULT_PAKE_OPTIONS.camera)
+        .hideHelp())
+        .addOption(new Option('--microphone', 'Request microphone permission on macOS')
+        .default(DEFAULT_PAKE_OPTIONS.microphone)
         .hideHelp())
         .version(packageJson.version, '-v, --version')
         .configureHelp({
