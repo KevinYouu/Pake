@@ -26,6 +26,22 @@ on:
       icon:
         description: "App Icon"
         required: false
+      new_window:
+        description: "Allow sites to open new windows"
+        required: false
+        default: false
+      incognito:
+        description: "Enable incognito mode"
+        required: false
+        default: false
+      width:
+        description: "Window width"
+        required: false
+        default: 1200
+      height:
+        description: "Window height"
+        required: false
+        default: 780
   workflow_call:
     inputs:
       name:
@@ -52,6 +68,26 @@ on:
         description: "App Icon"
         type: string
         required: false
+      new_window:
+        description: "Allow sites to open new windows"
+        type: boolean
+        required: false
+        default: false
+      incognito:
+        description: "Enable incognito mode"
+        type: boolean
+        required: false
+        default: false
+      width:
+        description: "Window width"
+        type: number
+        required: false
+        default: 1200
+      height:
+        description: "Window height"
+        type: number
+        required: false
+        default: 780
     secrets:
       PAKE_SIGNING_IDENTITY:
         required: false
@@ -174,6 +210,17 @@ jobs:
             ARGS+=("--icon" "src-tauri/png/${{ inputs.name }}_512.png")
           fi
 
+          if [ "${{ inputs.new_window }}" = "true" ]; then
+            ARGS+=("--new-window")
+          fi
+
+          if [ "${{ inputs.incognito }}" = "true" ]; then
+            ARGS+=("--incognito")
+          fi
+
+          ARGS+=("--width" "${{ inputs.width }}")
+          ARGS+=("--height" "${{ inputs.height }}")
+
           # Build once with multiple targets (faster than separate builds)
           node dist/cli.js "${ARGS[@]}" --targets deb,appimage
 
@@ -216,6 +263,17 @@ jobs:
           elif [ -f "src-tauri/icons/${{ inputs.name }}.icns" ]; then
             ARGS+=("--icon" "src-tauri/icons/${{ inputs.name }}.icns")
           fi
+
+          if [ "${{ inputs.new_window }}" = "true" ]; then
+            ARGS+=("--new-window")
+          fi
+
+          if [ "${{ inputs.incognito }}" = "true" ]; then
+            ARGS+=("--incognito")
+          fi
+
+          ARGS+=("--width" "${{ inputs.width }}")
+          ARGS+=("--height" "${{ inputs.height }}")
 
           node dist/cli.js "${ARGS[@]}" --targets universal --multi-arch
 
@@ -282,6 +340,17 @@ jobs:
             $args += "--icon", "src-tauri\png\${{ inputs.name }}_256.ico"
           }
 
+          if ("${{ inputs.new_window }}" -eq "true") {
+            $args += "--new-window"
+          }
+
+          if ("${{ inputs.incognito }}" -eq "true") {
+            $args += "--incognito"
+          }
+
+          $args += "--width", "${{ inputs.width }}"
+          $args += "--height", "${{ inputs.height }}"
+
           $args += "--targets", "x64"
 
           node dist/cli.js $args
@@ -335,6 +404,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/')
         with:
           allowUpdates: true
+          omitBody: true
+          omitName: true
           artifacts: "output/linux/*.deb,output/linux/*.AppImage"
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -343,6 +414,8 @@ jobs:
         if: matrix.os == 'macos-latest' && startsWith(github.ref, 'refs/tags/')
         with:
           allowUpdates: true
+          omitBody: true
+          omitName: true
           artifacts: "output/macos/*.dmg"
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -351,5 +424,7 @@ jobs:
         if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
         with:
           allowUpdates: true
+          omitBody: true
+          omitName: true
           artifacts: "output/windows/*.msi"
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,3 +1,4 @@
+use crate::app::window::open_additional_window_safe;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -14,33 +15,44 @@ pub fn set_system_tray(
     show_system_tray: bool,
     tray_icon_path: &str,
     _init_fullscreen: bool,
+    allow_multi_window: bool,
 ) -> tauri::Result<()> {
     if !show_system_tray {
         app.remove_tray_by_id("pake-tray");
         return Ok(());
     }
 
+    let new_window = MenuItemBuilder::with_id("new_window", "New Window").build(app)?;
     let hide_app = MenuItemBuilder::with_id("hide_app", "Hide").build(app)?;
     let show_app = MenuItemBuilder::with_id("show_app", "Show").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
-    let menu = MenuBuilder::new(app)
-        .items(&[&hide_app, &show_app, &quit])
-        .build()?;
+    let menu = if allow_multi_window {
+        MenuBuilder::new(app)
+            .items(&[&new_window, &hide_app, &show_app, &quit])
+            .build()?
+    } else {
+        MenuBuilder::new(app)
+            .items(&[&hide_app, &show_app, &quit])
+            .build()?
+    };
 
     app.app_handle().remove_tray_by_id("pake-tray");
 
-    let tray = TrayIconBuilder::new()
+    let mut tray_builder = TrayIconBuilder::new()
         .menu(&menu)
         .on_menu_event(move |app, event| match event.id().as_ref() {
+            "new_window" => {
+                open_additional_window_safe(app);
+            }
             "hide_app" => {
                 if let Some(window) = app.get_webview_window("pake") {
-                    window.minimize().unwrap();
+                    let _ = window.minimize();
                 }
             }
             "show_app" => {
                 if let Some(window) = app.get_webview_window("pake") {
-                    window.show().unwrap();
+                    let _ = window.show();
                     #[cfg(target_os = "linux")]
                     if _init_fullscreen && !window.is_fullscreen().unwrap_or(false) {
                         let _ = window.set_fullscreen(true);
@@ -49,8 +61,8 @@ pub fn set_system_tray(
                 }
             }
             "quit" => {
-                app.save_window_state(StateFlags::all()).unwrap();
-                std::process::exit(0);
+                let _ = app.save_window_state(StateFlags::all());
+                app.exit(0);
             }
             _ => (),
         })
@@ -60,10 +72,10 @@ pub fn set_system_tray(
                     if let Some(window) = tray.app_handle().get_webview_window("pake") {
                         let is_visible = window.is_visible().unwrap_or(false);
                         if is_visible {
-                            window.hide().unwrap();
+                            let _ = window.hide();
                         } else {
-                            window.show().unwrap();
-                            window.set_focus().unwrap();
+                            let _ = window.show();
+                            let _ = window.set_focus();
                             #[cfg(target_os = "linux")]
                             if _init_fullscreen && !window.is_fullscreen().unwrap_or(false) {
                                 let _ = window.set_fullscreen(true);
@@ -73,20 +85,23 @@ pub fn set_system_tray(
                 }
             }
             _ => {}
-        })
-        .icon(if tray_icon_path.is_empty() {
-            app.default_window_icon()
-                .unwrap_or_else(|| panic!("Failed to get default window icon"))
-                .clone()
-        } else {
-            tauri::image::Image::from_path(tray_icon_path).unwrap_or_else(|_| {
-                // If custom tray icon fails to load, fallback to default
-                app.default_window_icon()
-                    .unwrap_or_else(|| panic!("Failed to get default window icon"))
-                    .clone()
-            })
-        })
-        .build(app)?;
+        });
+
+    let resolved_icon = if tray_icon_path.is_empty() {
+        app.default_window_icon().cloned()
+    } else {
+        tauri::image::Image::from_path(tray_icon_path)
+            .ok()
+            .or_else(|| app.default_window_icon().cloned())
+    };
+
+    if let Some(icon) = resolved_icon {
+        tray_builder = tray_builder.icon(icon);
+    } else {
+        eprintln!("[Pake] No tray icon available; tray will build without an icon.");
+    }
+
+    let tray = tray_builder.build(app)?;
 
     tray.set_icon_as_template(false)?;
     Ok(())
@@ -102,7 +117,10 @@ pub fn set_global_shortcut(
     }
 
     let app_handle = app.clone();
-    let shortcut_hotkey = Shortcut::from_str(&shortcut).unwrap();
+    let shortcut_hotkey = match Shortcut::from_str(&shortcut) {
+        Ok(s) => s,
+        Err(_) => return Ok(()),
+    };
     let last_triggered = Arc::new(Mutex::new(Instant::now()));
 
     app_handle
@@ -111,7 +129,9 @@ pub fn set_global_shortcut(
                 .with_handler({
                     let last_triggered = Arc::clone(&last_triggered);
                     move |app, event, _shortcut| {
-                        let mut last_triggered = last_triggered.lock().unwrap();
+                        let Ok(mut last_triggered) = last_triggered.lock() else {
+                            return;
+                        };
                         if Instant::now().duration_since(*last_triggered)
                             < Duration::from_millis(300)
                         {
@@ -121,12 +141,12 @@ pub fn set_global_shortcut(
 
                         if shortcut_hotkey.eq(event) {
                             if let Some(window) = app.get_webview_window("pake") {
-                                let is_visible = window.is_visible().unwrap();
+                                let is_visible = window.is_visible().unwrap_or(false);
                                 if is_visible {
-                                    window.hide().unwrap();
+                                    let _ = window.hide();
                                 } else {
-                                    window.show().unwrap();
-                                    window.set_focus().unwrap();
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
                                     #[cfg(target_os = "linux")]
                                     if _init_fullscreen && !window.is_fullscreen().unwrap_or(false)
                                     {
@@ -141,7 +161,7 @@ pub fn set_global_shortcut(
         )
         .expect("Failed to set global shortcut");
 
-    app.global_shortcut().register(shortcut_hotkey).unwrap();
+    let _ = app.global_shortcut().register(shortcut_hotkey);
 
     Ok(())
 }

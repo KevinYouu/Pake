@@ -1,7 +1,7 @@
 {
   "productName": "Weekly",
   "identifier": "com.pake.weekly",
-  "version": "1.0.0",
+  "version": "3.11.3",
   "app": {
     "withGlobalTauri": true,
     "trayIcon": {

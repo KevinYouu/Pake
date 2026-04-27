@@ -1,10 +1,12 @@
-export interface PlatformMap {
-  [key: string]: any;
-}
+export type SupportedPlatform = 'win32' | 'darwin' | 'linux';
+export type TauriPlatform = 'windows' | 'macos' | 'linux';
 
 export interface PakeCliOptions {
   // Application name
   name?: string;
+
+  // Explicit app identifier / bundle id
+  identifier?: string;
 
   // Window title (supports Chinese characters)
   title?: string;
@@ -94,11 +96,17 @@ export interface PakeCliOptions {
   // Allow multiple instances, default false (single instance)
   multiInstance: boolean;
 
+  // Allow opening multiple windows in one app instance, default false
+  multiWindow: boolean;
+
   // Start app minimized to tray, default false
   startToTray: boolean;
 
   // Force navigation to stay inside the Pake window even for external links
   forceInternalNavigation: boolean;
+
+  // Regex pattern to match URLs that should be considered internal
+  internalUrlRegex: string;
 
   // Initial page zoom level (50-200), default 100
   zoom: number;
@@ -115,8 +123,17 @@ export interface PakeCliOptions {
   // Turn on rapid build mode (app only, no dmg/deb/msi), good for debugging
   iterativeBuild: boolean;
 
-  // Allow new window for third-party login, default false
+  // Allow sites to open new windows, default false
   newWindow: boolean;
+
+  // Auto-install app to /Applications (macOS) after build, default false
+  install: boolean;
+
+  // Request camera entitlement on macOS, default false
+  camera: boolean;
+
+  // Request microphone entitlement on macOS, default false
+  microphone: boolean;
 }
 
 export interface PakeAppOptions extends PakeCliOptions {
@@ -149,6 +166,7 @@ export interface WindowConfig {
   enable_drag_drop: boolean;
   start_to_tray: boolean;
   force_internal_navigation: boolean;
+  internal_url_regex: string;
   zoom: number;
   min_width: number;
   min_height: number;
@@ -163,4 +181,36 @@ export interface PakeConfig {
   system_tray_path: string;
   proxy_url: string;
   multi_instance: boolean;
+  multi_window: boolean;
+  inject?: string[];
+}
+
+export interface PakeTauriConfig {
+  productName?: string;
+  identifier?: string;
+  version?: string;
+  mainBinaryName?: string;
+  pake: PakeConfig;
+  bundle: {
+    icon?: string[];
+    resources?: string[];
+    targets?: string[];
+    linux?: {
+      deb: { files?: Record<string, string> };
+      rpm?: { files?: Record<string, string> };
+      [key: string]: unknown;
+    };
+    windows?: {
+      wix: { language: string[] };
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
+  app: {
+    security?: { headers?: Record<string, string> };
+    trayIcon?: unknown;
+    [key: string]: unknown;
+  };
+  build?: unknown;
+  [key: string]: unknown;
 }
