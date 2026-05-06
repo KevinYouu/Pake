@@ -23,6 +23,7 @@ function setZoom(zoom) {
     body.style.height = `${100 / zoomValue}%`;
   } else {
     html.style.zoom = zoom;
+    window.dispatchEvent(new Event("resize"));
   }
 
   window.localStorage.setItem("htmlZoom", zoom);
@@ -256,12 +257,36 @@ function isDownloadableFile(url) {
   }
 }
 
+function normalizeAnchorHref(rawHref) {
+  return typeof rawHref === "string" ? rawHref.trim() : "";
+}
+
+function shouldBypassPakeLinkHandling(rawHref) {
+  const normalizedHref = normalizeAnchorHref(rawHref).toLowerCase();
+  if (!normalizedHref) {
+    return false;
+  }
+
+  return (
+    normalizedHref.startsWith("javascript:") || normalizedHref.startsWith("#")
+  );
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const tauri = window.__TAURI__;
   const appWindow = tauri.window.getCurrentWindow();
   const invoke = tauri.core.invoke;
   const pakeConfig = window["pakeConfig"] || {};
   const forceInternalNavigation = pakeConfig.force_internal_navigation === true;
+  const internalUrlRegex = pakeConfig.internal_url_regex || "";
+  let internalUrlPattern = null;
+  if (internalUrlRegex) {
+    try {
+      internalUrlPattern = new RegExp(internalUrlRegex);
+    } catch (e) {
+      console.error("[Pake] Invalid internal_url_regex pattern:", e);
+    }
+  }
 
   if (!document.getElementById("pake-top-dom")) {
     const topDom = document.createElement("div");
@@ -327,14 +352,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function convertBlobUrlToBinary(blobUrl) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const blob = window.blobToUrlCaches.get(blobUrl);
+      if (!blob) {
+        fetch(blobUrl)
+          .then((res) => res.arrayBuffer())
+          .then((buffer) => resolve(Array.from(new Uint8Array(buffer))))
+          .catch(reject);
+        return;
+      }
       const reader = new FileReader();
-
       reader.readAsArrayBuffer(blob);
       reader.onload = () => {
         resolve(Array.from(new Uint8Array(reader.result)));
       };
+      reader.onerror = () => reject(reader.error);
     });
   }
 
@@ -465,6 +497,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // Check if URL should be treated as internal based on regex pattern or domain
+  const isInternalUrl = (url) => {
+    // If regex pattern is configured, use it as the primary check
+    if (internalUrlPattern) {
+      try {
+        return internalUrlPattern.test(url);
+      } catch (e) {
+        console.error("[Pake] Error testing internal_url_regex:", e);
+        // Fall back to domain check on error
+        return isSameDomain(url);
+      }
+    }
+    // Default to domain-based check
+    return isSameDomain(url);
+  };
+
   const detectAnchorElementClick = (e) => {
     // Safety check: ensure e.target exists and is an Element with closest method
     if (!e.target || typeof e.target.closest !== "function") {
@@ -473,18 +521,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const anchorElement = e.target.closest("a");
 
     if (anchorElement && anchorElement.href) {
+      const rawHref = anchorElement.getAttribute("href") || "";
+      if (shouldBypassPakeLinkHandling(rawHref)) {
+        return;
+      }
+
       const target = anchorElement.target;
       const hrefUrl = new URL(anchorElement.href);
       const absoluteUrl = hrefUrl.href;
       let filename = anchorElement.download || getFilenameFromUrl(absoluteUrl);
 
-      // Early check: Allow OAuth/authentication links to navigate naturally
+      // Keep OAuth/authentication flows inside the app when popup support is enabled.
       if (window.isAuthLink(absoluteUrl)) {
-        console.log("[Pake] Allowing OAuth navigation to:", absoluteUrl);
+        console.log("[Pake] Handling OAuth navigation in-app:", absoluteUrl);
+
+        if (window.pakeConfig?.new_window) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+
+          const authWindow = originalWindowOpen.call(
+            window,
+            absoluteUrl,
+            "_blank",
+            "width=1200,height=800,scrollbars=yes,resizable=yes",
+          );
+
+          if (!authWindow) {
+            window.location.href = absoluteUrl;
+          }
+        }
+
         return;
       }
 
-      // Handle _blank links: same domain navigates in-app, cross-domain opens new window
+      // Handle _blank links: internal links stay in-app, external links open in the system browser
       if (target === "_blank") {
         if (forceInternalNavigation) {
           e.preventDefault();
@@ -493,20 +563,14 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        if (isSameDomain(absoluteUrl)) {
-          // For same-domain links, let the browser handle it naturally
+        if (isInternalUrl(absoluteUrl)) {
+          // For internal links (based on regex or domain), let the browser handle it naturally
           return;
         }
 
         e.preventDefault();
         e.stopImmediatePropagation();
-        const newWindow = originalWindowOpen.call(
-          window,
-          absoluteUrl,
-          "_blank",
-          "width=1200,height=800,scrollbars=yes,resizable=yes",
-        );
-        if (!newWindow) handleExternalLink(absoluteUrl);
+        handleExternalLink(absoluteUrl);
         return;
       }
 
@@ -537,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Handle regular links: same domain allows normal navigation, cross-domain opens new window
+      // Handle regular links: internal URLs allow normal navigation, external links open in the system browser
       if (!target || target === "_self") {
         // Optimization: Allow previewable media to be handled by the app/browser directly
         // This fixes issues where CDN links are treated as external
@@ -545,20 +609,14 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        if (!isSameDomain(absoluteUrl)) {
+        if (!isInternalUrl(absoluteUrl)) {
           if (forceInternalNavigation) {
             return;
           }
 
           e.preventDefault();
           e.stopImmediatePropagation();
-          const newWindow = originalWindowOpen.call(
-            window,
-            absoluteUrl,
-            "_blank",
-            "width=1200,height=800,scrollbars=yes,resizable=yes",
-          );
-          if (!newWindow) handleExternalLink(absoluteUrl);
+          handleExternalLink(absoluteUrl);
         }
       }
     }
@@ -573,6 +631,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // Rewrite the window.open function.
   const originalWindowOpen = window.open;
   window.open = function (url, name, specs) {
+    const normalizedUrl = normalizeAnchorHref(url);
+    if (normalizedUrl.startsWith("#")) {
+      window.location.href = new URL(normalizedUrl, window.location.href).href;
+      return window;
+    }
+
+    if (shouldBypassPakeLinkHandling(url)) {
+      return originalWindowOpen.call(window, url, name, specs);
+    }
+
     // Allow authentication popups to open normally
     if (window.isAuthPopup(url, name)) {
       return originalWindowOpen.call(window, url, name, specs);
@@ -583,7 +651,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const hrefUrl = new URL(url, baseUrl);
       const absoluteUrl = hrefUrl.href;
 
-      if (!isSameDomain(absoluteUrl)) {
+      if (!isInternalUrl(absoluteUrl)) {
         if (forceInternalNavigation) {
           return originalWindowOpen.call(window, absoluteUrl, name, specs);
         }
@@ -959,23 +1027,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
 document.addEventListener("DOMContentLoaded", function () {
   let permVal = "granted";
+  let lastNotifTime = 0;
+  let lastNotif = null;
+
+  window.addEventListener("focus", () => {
+    if (lastNotif?.onclick && Date.now() - lastNotifTime < 5000) {
+      lastNotif.onclick(new Event("click"));
+      lastNotif = null;
+    }
+  });
+
   window.Notification = function (title, options) {
     const { invoke } = window.__TAURI__.core;
     const body = options?.body || "";
     let icon = options?.icon || "";
 
-    // If the icon is a relative path, convert to full path using URI
     if (icon.startsWith("/")) {
       icon = window.location.origin + icon;
     }
 
-    invoke("send_notification", {
-      params: {
-        title,
-        body,
-        icon,
-      },
+    const notif = {
+      onclick: null,
+      onclose: null,
+      onshow: null,
+      onerror: null,
+      close: () => {},
+    };
+
+    lastNotifTime = Date.now();
+    lastNotif = notif;
+
+    invoke("send_notification", { params: { title, body, icon } }).then(() => {
+      if (notif.onshow) notif.onshow(new Event("show"));
     });
+
+    return notif;
   };
 
   window.Notification.requestPermission = async () => "granted";

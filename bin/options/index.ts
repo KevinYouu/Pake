@@ -4,9 +4,14 @@ import logger from '@/options/logger';
 
 import { handleIcon } from './icon';
 import { getDomain } from '@/utils/url';
-import { getIdentifier, promptText, capitalizeFirstLetter } from '@/utils/info';
+import {
+  promptText,
+  capitalizeFirstLetter,
+  resolveIdentifier,
+} from '@/utils/info';
 import { generateLinuxPackageName } from '@/utils/name';
-import { PakeAppOptions, PakeCliOptions, PlatformMap } from '@/types';
+import { PakeError } from '@/utils/error';
+import { PakeAppOptions, PakeCliOptions } from '@/types';
 
 function resolveAppName(name: string, platform: NodeJS.Platform): string {
   const domain = getDomain(name) || 'pake';
@@ -30,11 +35,10 @@ function resolveLocalAppName(
 }
 
 function isValidName(name: string, platform: NodeJS.Platform): boolean {
-  const platformRegexMapping: PlatformMap = {
-    linux: /^[a-z0-9\u4e00-\u9fff][a-z0-9\u4e00-\u9fff-]*$/,
-    default: /^[a-zA-Z0-9\u4e00-\u9fff][a-zA-Z0-9\u4e00-\u9fff- ]*$/,
-  };
-  const reg = platformRegexMapping[platform] || platformRegexMapping.default;
+  const reg =
+    platform === 'linux'
+      ? /^[a-z0-9\u4e00-\u9fff][a-z0-9\u4e00-\u9fff-]*$/
+      : /^[a-zA-Z0-9\u4e00-\u9fff][a-zA-Z0-9\u4e00-\u9fff- ]*$/;
   return !!name && reg.test(name);
 }
 
@@ -65,19 +69,21 @@ export default async function handleOptions(
     const DEFAULT_NAME_ERROR = `✕ Name should only include letters, numbers, dashes, and spaces (not leading dashes and spaces). Examples: 123pan, 123Pan, Pan123, weread, WeRead, WERead, we-read, We Read, 123.`;
     const errorMsg =
       platform === 'linux' ? LINUX_NAME_ERROR : DEFAULT_NAME_ERROR;
-    logger.error(errorMsg);
     if (isActions) {
+      logger.error(errorMsg);
       name = resolveAppName(url, platform);
       logger.warn(`✼ Inside github actions, use the default name: ${name}`);
     } else {
-      process.exit(1);
+      throw new PakeError(errorMsg);
     }
   }
 
+  const resolvedName = name || 'pake-app';
+
   const appOptions: PakeAppOptions = {
     ...options,
-    name,
-    identifier: getIdentifier(url),
+    name: resolvedName,
+    identifier: resolveIdentifier(url, options.name, options.identifier),
   };
 
   const iconPath = await handleIcon(appOptions, url);
