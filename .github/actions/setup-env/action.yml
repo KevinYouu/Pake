@@ -147,8 +147,20 @@ runs:
         }
 
     # Build optimizations (caching)
+    - name: Setup sccache
+      if: inputs.mode == 'build'
+      uses: mozilla-actions/sccache-action@v0.0.9
+
+    - name: Enable sccache
+      if: inputs.mode == 'build'
+      shell: bash
+      run: |
+        echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+        echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
     - name: Setup Rust cache
       if: inputs.mode == 'build'
       uses: swatinem/rust-cache@v2
       with:
         workspaces: "src-tauri -> target"
+        shared-key: "pake-${{ runner.os }}"

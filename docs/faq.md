@@ -219,13 +219,23 @@ First-time installation on Windows can be slow due to:
 - Windows Defender real-time scanning
 - Network connectivity issues
 
-**Solution 1: Automatic Retry (Built-in)**
+**Solution 1: Enable CN Mirror Explicitly**
 
-Pake CLI now automatically retries with CN mirror if the initial installation times out. Simply wait for the retry to complete.
+Pake CLI uses the official npm and Rust sources by default. If downloads are slow in China, opt in to CN mirrors:
+
+```bash
+# macOS/Linux
+PAKE_USE_CN_MIRROR=1 pake https://github.com --name GitHub
+```
+
+```powershell
+# Windows PowerShell
+$env:PAKE_USE_CN_MIRROR="1"; pake https://github.com --name GitHub
+```
 
 **Solution 2: Manual Installation**
 
-If automatic retry fails, manually install dependencies:
+If dependency installation still fails, manually install dependencies:
 
 ```bash
 # Navigate to pake-cli installation directory
@@ -352,7 +362,46 @@ This is usually due to web compatibility issues. Try:
    pake https://example.com --inject ./fix.js
    ```
 
+   For pages that need periodic reloads, you can keep this behavior in a small injected script instead of adding a dedicated Pake option:
+
+   ```javascript
+   function isEditing(element) {
+     if (!element) return false;
+     const tagName = element.tagName;
+     return (
+       element.isContentEditable ||
+       tagName === "INPUT" ||
+       tagName === "TEXTAREA" ||
+       tagName === "SELECT"
+     );
+   }
+
+   setInterval(() => {
+     if (!document.hidden && !isEditing(document.activeElement)) {
+       window.location.reload();
+     }
+   }, 300000);
+   ```
+
+   Save it as `refresh.js` and package with:
+
+   ```bash
+   pake https://news.ycombinator.com --name HackerNews --inject ./refresh.js
+   ```
+
 3. **Check if the site requires specific permissions** that may not be available in WebView
+
+4. **Be aware of embedded-webview sign-in limits**
+
+   Some authentication providers, especially Google, may block sign-in inside embedded webviews. Because Pake packages sites into a desktop webview, Google properties or sites that rely on Google OAuth may still fail to sign in even when `--new-window` or `--multi-window` is enabled. This is provider policy, not a packaging bug. In those cases, use the normal browser, a browser-installed app, or a native desktop client.
+
+5. **WeChat Web login environment error**
+
+   WeChat detects the WebView and writes a flag cookie that blocks subsequent logins. Add `--incognito` when packaging to bypass it, at the cost of requiring a QR scan on every launch:
+
+   ```bash
+   pake https://wx.qq.com --name WeChat --incognito
+   ```
 
 ---
 

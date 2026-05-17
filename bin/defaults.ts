@@ -40,14 +40,20 @@ export const DEFAULT_PAKE_OPTIONS: PakeCliOptions = {
   enableDragDrop: false,
   keepBinary: false,
   multiInstance: false,
+  multiWindow: false,
   startToTray: false,
   forceInternalNavigation: false,
+  internalUrlRegex: '',
+  enableFind: false,
   iterativeBuild: false,
   zoom: 100,
   minWidth: 0,
   minHeight: 0,
   ignoreCertificateErrors: false,
   newWindow: false,
+  install: false,
+  camera: false,
+  microphone: false,
 };
 
 // Just for cli development
